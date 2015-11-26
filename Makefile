@@ -2,8 +2,7 @@ SOURCE  = src
 VPATH   = src
 CC 		= gcc
 CFLAGS  = -Wall  -g -std=gnu99
-OBJS	= proxy.o log.o
-
+OBJS	= proxy.o log.o handle.o
 
 
 default: proxy
@@ -18,5 +17,5 @@ clean:
 	@rm -f *~ *.o proxy 
 
 run:
-	./proxy /tmp/proxy.log 1.0 7777 1.0.0.1 1.0.0.2 5555 1.0.0.3
+	./proxy /tmp/proxy.log 1.0 7777 1.0.0.1 5.0.0.1 5555 3.0.0.1
 

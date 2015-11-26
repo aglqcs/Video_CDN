@@ -5,15 +5,10 @@
 
 #include "proxy.h"
 #include "log.h"
+#include "handle.h"
 
 proxy_session_list_t *head;
-char *log_file;
-float alpha;
-int listen_port;
-char *fake_ip;
-char *dns_ip;
-int dns_port;
-char *www_ip;
+
 
 int main(int argc, char* argv[]){
     int server_sockfd, client_sockfd;       
@@ -27,6 +22,7 @@ int main(int argc, char* argv[]){
     dns_ip = argv[5];
     dns_port = atoi(argv[6]);
     www_ip = argv[7];
+
     head = NULL;
 
     LOG_start(log_file);
@@ -82,12 +78,7 @@ int main(int argc, char* argv[]){
         proxy_session_list_t *p;
         for( p = head ; p != NULL; p = p->next){
             if (FD_ISSET(p->session.client_fd, &ready_to_read)) {
-                LOG("1\n");
-                char buffer[MAX_LENGTH];
-                memset(buffer, 0 , MAX_LENGTH);
-                read(p->session.client_fd, buffer, MAX_LENGTH);
-                LOG("%s\n", buffer);
-               // handle_client_recv();                
+                handle_client_recv(p->session.client_fd);                
             }
             if (FD_ISSET(p->session.client_fd, &ready_to_write)) {
                 LOG("2");
