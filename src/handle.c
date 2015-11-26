@@ -59,7 +59,8 @@ void handle_server_recv(proxy_session_list_t *node){
     memset(buffer, 0 , MAX_LENGTH);
     read(fd, buffer, MAX_LENGTH);
     LOG("%s", buffer);
-
+    write(node->session.client_fd, buffer, MAX_LENGTH);
+    FD_CLR(connect, &ready_to_read);
 }
 
 
