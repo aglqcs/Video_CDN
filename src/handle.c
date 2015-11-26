@@ -36,7 +36,9 @@ int connect_to_server(){
 	return client_fd;
 }
 
-void handle_client_recv(int fd){
+void handle_client_recv(proxy_session_list_t *node){
+	int fd = node->session.client_fd;
+
 	LOG("handle_client_recv fd = %d\n", fd);
     char buffer[MAX_LENGTH];
     memset(buffer, 0 , MAX_LENGTH);
@@ -47,6 +49,13 @@ void handle_client_recv(int fd){
     	LOG("handle_client_recv() connect_to_server return -1\n");
     }
     LOG("connect = %d\n", connect);
+    write(connect, buffer, MAX_LENGTH);
+
+    node->session.server_fd = connect;
+   /* memset(buffer, 0 ,MAX_LENGTH);
+    read(connect, buffer, MAX_LENGTH);
+    LOG("%s", buffer);
+	*/
 }
 
 

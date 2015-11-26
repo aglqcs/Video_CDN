@@ -6,7 +6,7 @@
 #include <arpa/inet.h>
 
 
-void handle_client_recv(int fd);
+void handle_client_recv(proxy_session_list_t *node);
 int connect_to_server();
 
 #endif

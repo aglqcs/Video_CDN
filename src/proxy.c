@@ -51,6 +51,7 @@ int main(int argc, char* argv[]){
 
     while(1){
         int select_count = select( FD_SETSIZE, &ready_to_read, &ready_to_write, NULL, NULL);
+        LOG("select_count = %d\n", select_count);
         if( select_count < 0){
             // select error
             return EXIT_FAILURE;
@@ -78,19 +79,19 @@ int main(int argc, char* argv[]){
         proxy_session_list_t *p;
         for( p = head ; p != NULL; p = p->next){
             if (FD_ISSET(p->session.client_fd, &ready_to_read)) {
-                handle_client_recv(p->session.client_fd);                
+                handle_client_recv(p);                
             }
             if (FD_ISSET(p->session.client_fd, &ready_to_write)) {
-                LOG("2");
+                LOG("2\n");
                // handle_client_send();                
             }
             if (FD_ISSET(p->session.server_fd, &ready_to_read)) {
-                                LOG("3");
+                LOG("3\n");
 
                // handle_server_recv();                
             }
             if (FD_ISSET(p->session.server_fd, &ready_to_write)) {
-                                LOG("4");
+                LOG("4\n");
 
                // handle_server_send();                
             }
