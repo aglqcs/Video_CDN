@@ -7,6 +7,8 @@
 
 
 void handle_client_recv(proxy_session_list_t *node);
+void handle_server_recv(proxy_session_list_t *node);
+
 int connect_to_server();
 
 #endif

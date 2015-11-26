@@ -52,10 +52,14 @@ void handle_client_recv(proxy_session_list_t *node){
     write(connect, buffer, MAX_LENGTH);
 
     node->session.server_fd = connect;
-   /* memset(buffer, 0 ,MAX_LENGTH);
-    read(connect, buffer, MAX_LENGTH);
+}
+void handle_server_recv(proxy_session_list_t *node){
+	int fd = node->session.server_fd;
+	char buffer[MAX_LENGTH];
+    memset(buffer, 0 , MAX_LENGTH);
+    read(fd, buffer, MAX_LENGTH);
     LOG("%s", buffer);
-	*/
+
 }
 
 

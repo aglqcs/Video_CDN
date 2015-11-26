@@ -86,9 +86,7 @@ int main(int argc, char* argv[]){
                // handle_client_send();                
             }
             if (FD_ISSET(p->session.server_fd, &ready_to_read)) {
-                LOG("3\n");
-
-               // handle_server_recv();                
+                handle_server_recv(p);                
             }
             if (FD_ISSET(p->session.server_fd, &ready_to_write)) {
                 LOG("4\n");
