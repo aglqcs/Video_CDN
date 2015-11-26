@@ -12,8 +12,9 @@
 #include <stdarg.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
 
-#define MAX_LENGTH 8192
+#define MAX_LENGTH 8192 
 
 char *log_file;
 float alpha;

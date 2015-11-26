@@ -45,22 +45,32 @@ void handle_client_recv(proxy_session_list_t *node){
     read(fd, buffer, MAX_LENGTH);
     LOG("%s", buffer);
     int connect;
-    if ( (connect = connect_to_server()) == -1){
+    if( node->session.server_fd != -1) {
+		LOG("already has the connection, close the old and open new\n");
+		close(node->session.server_fd);
+	}
+	if ( (connect = connect_to_server()) == -1){
     	LOG("handle_client_recv() connect_to_server return -1\n");
-    }
+    	return;
+	}
     LOG("connect = %d\n", connect);
     write(connect, buffer, MAX_LENGTH);
     FD_SET(connect, &ready_to_read);
     node->session.server_fd = connect;
 }
+
 void handle_server_recv(proxy_session_list_t *node){
+	LOG("In handle_server_recv()\n");
 	int fd = node->session.server_fd;
-	char buffer[MAX_LENGTH];
-    memset(buffer, 0 , MAX_LENGTH);
-    read(fd, buffer, MAX_LENGTH);
-    LOG("%s", buffer);
-    write(node->session.client_fd, buffer, MAX_LENGTH);
-    FD_CLR(connect, &ready_to_read);
+	char buffer[MAX_LENGTH ];
+    memset(buffer, 0 , MAX_LENGTH );
+    int ret_read;
+	while( (ret_read = read(fd, buffer, MAX_LENGTH))  > 0){
+		LOG("%s",buffer);
+   		write(node->session.client_fd, buffer, ret_read);
+		memset(buffer, 0, MAX_LENGTH);
+	}
+    FD_CLR(node->session.server_fd, &ready_to_read);
 }
 
 

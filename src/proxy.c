@@ -14,6 +14,8 @@ int main(int argc, char* argv[]){
     int server_sockfd, client_sockfd;       
     struct sockaddr_in addr;
 
+    signal(SIGPIPE, SIG_IGN);
+
     log_file = argv[1];
     alpha = atof(argv[2]);
     listen_port = atoi(argv[3]);
@@ -64,7 +66,7 @@ int main(int argc, char* argv[]){
             FD_SET(client_fd, &ready_to_read);
             proxy_session_list_t *new_element = (proxy_session_list_t *)malloc( sizeof(proxy_session_list_t));
             new_element->session.client_fd = client_fd;
-            new_element->session.server_fd = 0;
+            new_element->session.server_fd = -1; 
             if( head == NULL){
                 new_element->next = NULL;
                 head = new_element;
