@@ -50,7 +50,7 @@ void handle_client_recv(proxy_session_list_t *node){
     }
     LOG("connect = %d\n", connect);
     write(connect, buffer, MAX_LENGTH);
-
+    FD_SET(connect, &ready_to_read);
     node->session.server_fd = connect;
 }
 void handle_server_recv(proxy_session_list_t *node){

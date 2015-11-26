@@ -23,6 +23,8 @@ char *dns_ip;
 int dns_port;
 char *www_ip;
 
+fd_set ready_to_read, ready_to_write;
+
 typedef struct proxy_session{
 	int client_fd;
 	int server_fd;

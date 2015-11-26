@@ -13,7 +13,6 @@ proxy_session_list_t *head;
 int main(int argc, char* argv[]){
     int server_sockfd, client_sockfd;       
     struct sockaddr_in addr;
-    fd_set ready_to_read, ready_to_write;
 
     log_file = argv[1];
     alpha = atof(argv[2]);
