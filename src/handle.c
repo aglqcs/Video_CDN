@@ -47,7 +47,6 @@ void handle_client_recv(proxy_session_list_t *node){
 		LOG("handle_client_recv() fd = %d, errno = %d\n",fd, errno );
 		return;
 	}
-//	LOG("%s", buffer);
     int connect;
     if( node->session.server_fd != -1) {
 		LOG("already has the connection, close the old and open new\n");
@@ -59,18 +58,12 @@ void handle_client_recv(proxy_session_list_t *node){
 	}
     LOG("connect = %d\n", connect);
    
-//   	int ret_read;
- //  	while( (ret_read = read(fd,buffer,MAX_LENGTH)) >0){
- //  		LOG("ret_read = %d\n", ret_read);
 		int ret_write = write(connect, buffer, ret_read);
 		LOG("ret_write = %d\n%s", ret_write, buffer);
 		if( ret_write < 0){   
 			LOG("handle_client_recv() error clientfd = %d, errno = %d\n",fd, errno);
 			return;
 		}
-//		memset(buffer, 0 ,MAX_LENGTH);
- //  		LOG("next loop...\n");
- //  }
  	if( ret_write > 0){
     	FD_SET(connect, &ready_to_read);
 	}
@@ -93,30 +86,17 @@ void handle_server_recv(proxy_session_list_t *node){
 		LOG("ret_read = %d\n", ret_read);
 		memcpy(big_buffer + total_read, buffer, ret_read);
 		total_read += ret_read;
-	/*	int ret_write =	write(node->session.client_fd, buffer, ret_read);
-		if( ret_write < 0){
-			LOG("write to client error clientfd = %d, errno = %d\n", node->session.client_fd, errno);
-			close(fd);
-			return;
-		}
-		LOG("ret_write = %d\n", ret_write);
-	*/	memset(buffer, 0, MAX_LENGTH);
+		memset(buffer, 0, MAX_LENGTH);
 	}
 	int parse_ret = parse_f4m_response(big_buffer, total_read, new_buffer);
 	int ret_write = 0;
 	if( -1 != parse_ret ){
-//		ret_write = write(node->session.client_fd, new_buffer,parse_ret);
-		ret_write = write(node->session.client_fd, big_buffer, total_read);
-	/*	int k;
-		for(k =0;k < parse_ret; k ++){
-			LOG("%c",new_buffer[k]);
-		}*/
-		LOG("%s", new_buffer);
+		ret_write = write(node->session.client_fd, new_buffer,parse_ret);
 		LOG("f4m ret_write = %d\n",ret_write);
 	}
 	else{
 		ret_write = write(node->session.client_fd, big_buffer, total_read);
-		LOG("f4m ret_write = %d\n",ret_write);
+		LOG("data ret_write = %d\n",ret_write);
 	}
 	LOG("Exit handle_server_recv() last ret_read = %d total_recv = %d\n", ret_read, total_read);
     FD_CLR(node->session.server_fd, &ready_to_read);
@@ -166,9 +146,9 @@ int write_f4m_nolist(char *src,int offset, char *newbuffer){
 	while( (read_length = read_line( line, xml_start + total, MAX_LENGTH)) > 0){
 		if( 1 == start_with(line, "bitrate") ){
 		}
-		else if( 1 == start_with(line, "</manifest>" ) ){
-			memcpy(buffer + write_offset, line, read_length - 1);
-			write_offset += (read_length - 1);
+		else if( 1 == start_with(line, "</media>") ){
+			memcpy( buffer + write_offset ,line, read_length);
+			write_offset += read_length;
 			break;
 		}
 		else{
@@ -178,6 +158,10 @@ int write_f4m_nolist(char *src,int offset, char *newbuffer){
 		total += read_length;	
 		memset(line, 0, MAX_LENGTH);
 	}
+	char *end_manifest = "</manifest>";
+	memcpy(buffer + write_offset, end_manifest, strlen(end_manifest));
+	write_offset += strlen(end_manifest);
+	
 	
 	memset(line, 0 ,MAX_LENGTH);
 	total = 0;
@@ -202,15 +186,7 @@ int write_f4m_nolist(char *src,int offset, char *newbuffer){
 		total += read_length;
 	}
 
-//	newbuffer[buffer_offset] = '\r';
-//	newbuffer[buffer_offset] = '\n';
-//	newbuffer[buffer_offset + 1] = '\n';
-//	buffer_offset += 1;
-	
 	memcpy(newbuffer + buffer_offset, buffer, write_offset);
-	LOG("head = \n%s\n",headbuffer);
-	LOG("content buffer contentleng = %d\n%s||\n",write_offset, buffer);
-	LOG("newhead = \n%s\n", newbuffer);
 	return buffer_offset + write_offset;
 }
 
