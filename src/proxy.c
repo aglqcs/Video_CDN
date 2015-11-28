@@ -55,15 +55,19 @@ int main(int argc, char* argv[]){
         LOG("select_count = %d\n", select_count);
         if( select_count < 0){
             // select error
-            return EXIT_FAILURE;
+			continue;
+			//return EXIT_FAILURE;
         }
         if( FD_ISSET(server_sockfd, &ready_to_read)){
-            int client_fd = accept(server_sockfd, NULL, NULL);
+           	struct sockaddr_in client_addr;
+		   	socklen_t size = sizeof(client_addr);
+			int client_fd = accept(server_sockfd, (struct sockaddr *)&client_addr, &size);
             if( client_fd < 0 ){
                 // accept error
                 return EXIT_FAILURE;
             }
-            FD_SET(client_fd, &ready_to_read);
+			LOG("get %s\n",inet_ntoa(client_addr.sin_addr ));
+		   	FD_SET(client_fd, &ready_to_read);
             proxy_session_list_t *new_element = (proxy_session_list_t *)malloc( sizeof(proxy_session_list_t));
             new_element->session.client_fd = client_fd;
             new_element->session.server_fd = -1; 

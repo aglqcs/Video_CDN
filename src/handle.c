@@ -58,12 +58,22 @@ void handle_client_recv(proxy_session_list_t *node){
     	return;
 	}
     LOG("connect = %d\n", connect);
-    int ret_write = write(connect, buffer, MAX_LENGTH);
-	if( ret_write < 0){
-		LOG("handle_client_recv() error clientfd = %d, errno = %d\n",fd, errno);
-		return;
+   
+//   	int ret_read;
+ //  	while( (ret_read = read(fd,buffer,MAX_LENGTH)) >0){
+ //  		LOG("ret_read = %d\n", ret_read);
+		int ret_write = write(connect, buffer, ret_read);
+		LOG("ret_write = %d\n%s", ret_write, buffer);
+		if( ret_write < 0){   
+			LOG("handle_client_recv() error clientfd = %d, errno = %d\n",fd, errno);
+			return;
+		}
+//		memset(buffer, 0 ,MAX_LENGTH);
+ //  		LOG("next loop...\n");
+ //  }
+ 	if( ret_write > 0){
+    	FD_SET(connect, &ready_to_read);
 	}
-    FD_SET(connect, &ready_to_read);
     node->session.server_fd = connect;
 	LOG("ending client_Recv()\n");
 }
@@ -71,23 +81,165 @@ void handle_client_recv(proxy_session_list_t *node){
 void handle_server_recv(proxy_session_list_t *node){
 	LOG("\n\nIn handle_server_recv()\n");
 	int fd = node->session.server_fd;
+	int total_read = 0;
 	char buffer[MAX_LENGTH ];
-    memset(buffer, 0 , MAX_LENGTH );
-    int ret_read;
+    char big_buffer[256000];
+	char new_buffer[256000];
+	memset(buffer, 0 , MAX_LENGTH );
+	memset(big_buffer, 0 , 256000);
+	memset(new_buffer, 0 ,256000);
+    int ret_read = -1;
 	while( (ret_read = read(fd, buffer, MAX_LENGTH))  > 0 ){
-	//	LOG("%s",buffer);
 		LOG("ret_read = %d\n", ret_read);
-		int ret_write =	write(node->session.client_fd, buffer, ret_read);
+		memcpy(big_buffer + total_read, buffer, ret_read);
+		total_read += ret_read;
+	/*	int ret_write =	write(node->session.client_fd, buffer, ret_read);
 		if( ret_write < 0){
 			LOG("write to client error clientfd = %d, errno = %d\n", node->session.client_fd, errno);
+			close(fd);
+			return;
 		}
-		memset(buffer, 0, MAX_LENGTH);
+		LOG("ret_write = %d\n", ret_write);
+	*/	memset(buffer, 0, MAX_LENGTH);
 	}
-	LOG("Exit handle_server_recv()\n");
+	int parse_ret = parse_f4m_response(big_buffer, total_read, new_buffer);
+	int ret_write = 0;
+	if( -1 != parse_ret ){
+		ret_write = write(node->session.client_fd, new_buffer,parse_ret);
+	/*	int k;
+		for(k =0;k < parse_ret; k ++){
+			LOG("%c",new_buffer[k]);
+		}*/
+		LOG("%s", new_buffer);
+		LOG("f4m ret_write = %d\n",ret_write);
+	}
+	else{
+		ret_write = write(node->session.client_fd, big_buffer, total_read);
+		LOG("f4m ret_write = %d\n",ret_write);
+	}
+	LOG("Exit handle_server_recv() last ret_read = %d total_recv = %d\n", ret_read, total_read);
     FD_CLR(node->session.server_fd, &ready_to_read);
 }
 
+int read_line(char *dst, char *src, int size){
+	int i;
+	for( i = 0;i < size; i ++){
+		dst[i] = src[i];
+		if( src[i] == '\n'){
+			break;
+		}
+	}
+	return i + 1;
+}
 
+int start_with(char *src, char *dst){
+	int size = strlen(dst);
+	int i;
+	int j;
+	for(i = 0;i < size;i ++){
+		if( src[i] == ' ' || src[i] == '\t') continue;
+		else break;
+	}
+	for(j = 0;i < size; j ++,i ++){
+		if( src[i] != dst[j]) return -1;
+	}
+	return 1;
+}
+	
+int write_f4m_nolist(char *src,int offset, char *newbuffer){
+	int i;
+	char headbuffer[MAX_LENGTH];
+	char buffer[256000];
+	memset(buffer, 0, 256000);
+	memset(headbuffer, 0 ,MAX_LENGTH);
+	for(i = 0; i < offset;  i ++){
+		headbuffer[i] = src[i];
+	}
+
+	char *xml_start = src + offset;
+	int read_length = 0;
+	int total = 0;
+	int write_offset = 0;
+	char line[MAX_LENGTH];
+	memset(line,0,MAX_LENGTH);
+	while( (read_length = read_line( line, xml_start + total, MAX_LENGTH)) > 0){
+		if( 1 == start_with(line, "bitrate") ){
+		}
+		else if( 1 == start_with(line, "</manifest>" ) ){
+			memcpy(buffer + write_offset, line, read_length);
+			write_offset += read_length;
+			break;
+		}
+		else{
+			memcpy(buffer + write_offset, line, read_length);
+			write_offset += read_length;
+		}
+		total += read_length;	
+		memset(line, 0, MAX_LENGTH);
+	}
+	
+	memset(line, 0 ,MAX_LENGTH);
+	total = 0;
+	int buffer_offset = 0;
+	while( (read_length = read_line( line, headbuffer + total, MAX_LENGTH)) > 0){
+		if( 1 == start_with(line,"Content-Length")){
+			char temp[50];
+			sprintf(temp, "Content-Length: %d\r\n", write_offset - 1);
+	//		sprintf(temp, "Content-Length: %d\r\n",5155);
+			memcpy(newbuffer + buffer_offset, temp, strlen(temp));
+			buffer_offset += strlen(temp);
+		}
+		else if( 1 == start_with(line,"Content-Type") ){
+			memcpy(newbuffer + buffer_offset, line, read_length);
+			buffer_offset += read_length;
+			break;
+		}
+		else{
+			memcpy( newbuffer + buffer_offset, line, read_length);
+			buffer_offset += read_length;
+		}
+		memset(line, 0, MAX_LENGTH);
+		total += read_length;
+	}
+
+	newbuffer[buffer_offset] = '\r';
+//	newbuffer[buffer_offset + 1] = '\n';
+	buffer_offset += 1;
+	
+	memcpy(newbuffer + buffer_offset, buffer, write_offset);
+	LOG("head = \n%s\n",headbuffer);
+	LOG("content buffer contentleng = %d\n%s\n",write_offset, buffer);
+	LOG("newhead = \n%s\n", newbuffer);
+	return buffer_offset + write_offset;
+}
+
+int parse_f4m_response(char *buffer, int total_read, char *newbuffer){
+	char line[MAX_LENGTH];
+	memset(line, 0, MAX_LENGTH);
+	int read_length = 0;
+	int total= 0;
+	while( total < total_read && (read_length = read_line(line,buffer+total, MAX_LENGTH))  > 0 ){
+		total += read_length;
+		if( 1 == start_with(line, "Content-Type") ){
+			char type[MAX_LENGTH];
+			sscanf(line,"Content-Type: %s\n", type);
+			if( strcmp(type,"video/f4f") == 0 ) {
+				LOG("Parse: type = video, continue ..\n");
+				return -1;
+			}
+			else if( strcmp(type, "text/xml") == 0){
+				return write_f4m_nolist(buffer , total + 1, newbuffer);
+			}
+			else{ 
+				LOG("Parse: type = %s\n",type);
+				return -1;
+			}
+		}
+		memset(line,0,MAX_LENGTH);
+	}
+	LOG("Parse: should never come here\n");
+	return -1;
+}
 
 
 
