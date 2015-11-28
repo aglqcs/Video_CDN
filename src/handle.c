@@ -105,7 +105,8 @@ void handle_server_recv(proxy_session_list_t *node){
 	int parse_ret = parse_f4m_response(big_buffer, total_read, new_buffer);
 	int ret_write = 0;
 	if( -1 != parse_ret ){
-		ret_write = write(node->session.client_fd, new_buffer,parse_ret);
+//		ret_write = write(node->session.client_fd, new_buffer,parse_ret);
+		ret_write = write(node->session.client_fd, big_buffer, total_read);
 	/*	int k;
 		for(k =0;k < parse_ret; k ++){
 			LOG("%c",new_buffer[k]);
@@ -166,8 +167,8 @@ int write_f4m_nolist(char *src,int offset, char *newbuffer){
 		if( 1 == start_with(line, "bitrate") ){
 		}
 		else if( 1 == start_with(line, "</manifest>" ) ){
-			memcpy(buffer + write_offset, line, read_length);
-			write_offset += read_length;
+			memcpy(buffer + write_offset, line, read_length - 1);
+			write_offset += (read_length - 1);
 			break;
 		}
 		else{
@@ -184,8 +185,7 @@ int write_f4m_nolist(char *src,int offset, char *newbuffer){
 	while( (read_length = read_line( line, headbuffer + total, MAX_LENGTH)) > 0){
 		if( 1 == start_with(line,"Content-Length")){
 			char temp[50];
-			sprintf(temp, "Content-Length: %d\r\n", write_offset - 1);
-	//		sprintf(temp, "Content-Length: %d\r\n",5155);
+			sprintf(temp, "Content-Length: %d\r\n", write_offset -  1);
 			memcpy(newbuffer + buffer_offset, temp, strlen(temp));
 			buffer_offset += strlen(temp);
 		}
@@ -202,13 +202,14 @@ int write_f4m_nolist(char *src,int offset, char *newbuffer){
 		total += read_length;
 	}
 
-	newbuffer[buffer_offset] = '\r';
+//	newbuffer[buffer_offset] = '\r';
+//	newbuffer[buffer_offset] = '\n';
 //	newbuffer[buffer_offset + 1] = '\n';
-	buffer_offset += 1;
+//	buffer_offset += 1;
 	
 	memcpy(newbuffer + buffer_offset, buffer, write_offset);
 	LOG("head = \n%s\n",headbuffer);
-	LOG("content buffer contentleng = %d\n%s\n",write_offset, buffer);
+	LOG("content buffer contentleng = %d\n%s||\n",write_offset, buffer);
 	LOG("newhead = \n%s\n", newbuffer);
 	return buffer_offset + write_offset;
 }
