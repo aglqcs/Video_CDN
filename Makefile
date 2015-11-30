@@ -2,7 +2,7 @@ SOURCE  = src
 VPATH   = src
 CC 		= gcc
 CFLAGS  = -Wall  -g -std=gnu99
-OBJS	= proxy.o log.o handle.o
+OBJS	= proxy.o log.o handle.o bitrate.o
 
 
 default: proxy

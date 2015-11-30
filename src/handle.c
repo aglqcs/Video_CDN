@@ -57,13 +57,33 @@ void handle_client_recv(proxy_session_list_t *node){
     	return;
 	}
     LOG("connect = %d\n", connect);
+	
+	// Parse the buffer
+	char http_method[8];
+	char http_request_file[128];
+	char http_version[16];
+
+	sscanf(buffer, "%s %s %s", http_method, http_request_file, http_version);
+	if(strncmp(http_method, "GET", 3) != 0 || strncmp(http_version, "HTTP/1.1", 8) != 0){
+		LOG("http_method %s || http_version %s is not correct\n", http_method, http_version);
+		return;
+	}
+
+	chunk_tracker_list_t* tl;
+	
+	if((tl=create_tracker(http_request_file, node)) != NULL){
+		LOG("Video chunk file\n");
+		update_bitrate(buffer, tl->throughput);
+	}
    
-		int ret_write = write(connect, buffer, ret_read);
-		LOG("ret_write = %d\n%s", ret_write, buffer);
-		if( ret_write < 0){   
-			LOG("handle_client_recv() error clientfd = %d, errno = %d\n",fd, errno);
-			return;
-		}
+	int ret_write = write(connect, buffer, ret_read);
+	LOG("ret_write = %d\n%s", ret_write, buffer);
+	
+
+	if( ret_write < 0){   
+		LOG("handle_client_recv() error clientfd = %d, errno = %d\n",fd, errno);
+		return;
+	}
  	if( ret_write > 0){
     	FD_SET(connect, &ready_to_read);
 	}
@@ -90,13 +110,22 @@ void handle_server_recv(proxy_session_list_t *node){
 	}
 	int parse_ret = parse_f4m_response(big_buffer, total_read, new_buffer);
 	int ret_write = 0;
-	if( -1 != parse_ret ){
+	if( parse_ret != -1 || parse_ret != -2 ){
 		ret_write = write(node->session.client_fd, new_buffer,parse_ret);
 		LOG("f4m ret_write = %d\n",ret_write);
 	}
 	else{
 		ret_write = write(node->session.client_fd, big_buffer, total_read);
 		LOG("data ret_write = %d\n",ret_write);
+		// Update the throughput once get all the data
+		if(parse_ret == -2){
+			int seg;
+			int frag;   
+			if(2 != sscanf(big_buffer, "%*sSeg%d-Frag%d", &seg, &frag))
+				LOG("This is not video chunks, ignore it\n");
+			update_throughput(0.3, ret_write, node, seg, frag);
+			LOG("Update throughput\n");
+		}
 	}
 	LOG("Exit handle_server_recv() last ret_read = %d total_recv = %d\n", ret_read, total_read);
     FD_CLR(node->session.server_fd, &ready_to_read);
@@ -202,7 +231,7 @@ int parse_f4m_response(char *buffer, int total_read, char *newbuffer){
 			sscanf(line,"Content-Type: %s\n", type);
 			if( strcmp(type,"video/f4f") == 0 ) {
 				LOG("Parse: type = video, continue ..\n");
-				return -1;
+				return -2;
 			}
 			else if( strcmp(type, "text/xml") == 0){
 				return write_f4m_nolist(buffer , total + 1, newbuffer);

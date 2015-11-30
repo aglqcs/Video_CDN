@@ -3,6 +3,7 @@
 
 #include "log.h"
 #include "proxy.h"
+#include "bitrate.h"
 #include <arpa/inet.h>
 
 int parse_f4m_response(char *, int, char *);
