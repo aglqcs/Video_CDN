@@ -26,7 +26,8 @@ int main(int argc, char* argv[]){
 
     head = NULL;
 
-    LOG_start(log_file);
+    LOG_start();
+	TEST_LOG_start(log_file);
     LOG("server listening on port = %d\n", listen_port);
     if((server_sockfd = socket(PF_INET, SOCK_STREAM, 0)) < 0){
         return EXIT_FAILURE;
@@ -71,7 +72,9 @@ int main(int argc, char* argv[]){
             proxy_session_list_t *new_element = (proxy_session_list_t *)malloc( sizeof(proxy_session_list_t));
             new_element->session.client_fd = client_fd;
             new_element->session.server_fd = -1; 
-            if( head == NULL){
+		   	int i;
+			for( i = 0;i < 10;i ++) new_element->session.bitrate[i] = -1;
+			if( head == NULL){
                 new_element->next = NULL;
                 head = new_element;
             } 
@@ -91,7 +94,7 @@ int main(int argc, char* argv[]){
                // handle_client_send();                
             }
             if (FD_ISSET(p->session.server_fd, &ready_to_read)) {
-                handle_server_recv(p);                
+                handle_server_recv(alpha, p);                
             }
             if (FD_ISSET(p->session.server_fd, &ready_to_write)) {
                 LOG("4\n");

@@ -78,15 +78,16 @@ chunk_tracker_list_t* search_seg(proxy_session_list_t* pl){
 	return NULL;
 }
 
-void update_bitrate(char* buffer, double throughput){
+void update_bitrate(char* buffer, double throughput, proxy_session_list_t* node){
 	char first[8192];
 	char second[8192];
 	double rate = 10;
-	double rates[4] = {10, 50, 100, 500};
 	int i;
-	for(i=3; i>=0; i--){
-		if(rates[i]*1.5 <= throughput){
-			rate = rates[i];
+	for(i=9; i>=0; i--){
+		if(node->session.bitrate[i] == -1)
+			continue;
+		if(node->session.bitrate[i]*1.5 <= throughput){
+			rate = (double)node->session.bitrate[i];
 			break;
 		}
 	}

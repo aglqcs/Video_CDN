@@ -75,7 +75,7 @@ void handle_client_recv(proxy_session_list_t *node){
 	
 	if((tl=create_tracker(http_request_file, node)) != NULL){
 		LOG("Video chunk file\n");
-		update_bitrate(buffer, tl->throughput);
+		update_bitrate(buffer, tl->throughput, node);
 	}
    
 	int ret_write = write(connect, buffer, ret_read);
@@ -93,7 +93,7 @@ void handle_client_recv(proxy_session_list_t *node){
 	LOG("ending client_Recv()\n");
 }
 
-void handle_server_recv(proxy_session_list_t *node){
+void handle_server_recv(float alpha, proxy_session_list_t *node){
 	LOG("\n\nIn handle_server_recv()\n");
 	int fd = node->session.server_fd;
 	int total_read = 0;
@@ -110,7 +110,7 @@ void handle_server_recv(proxy_session_list_t *node){
 		total_read += ret_read;
 		memset(buffer, 0, MAX_LENGTH);
 	}
-	int parse_ret = parse_f4m_response(big_buffer, total_read, new_buffer);
+	int parse_ret = parse_f4m_response(big_buffer, total_read, new_buffer, node);
 	int ret_write = 0;
 	if( parse_ret != -1 && parse_ret != -2 ){
 		ret_write = write(node->session.client_fd, new_buffer,parse_ret);
@@ -127,7 +127,7 @@ void handle_server_recv(proxy_session_list_t *node){
 				LOG("is is not video chunks, ignore it\n");
 			else
 				LOG("this is video chunks from server\n");
-			update_throughput(0.3, ret_write, node);
+			update_throughput(alpha, ret_write, node);
 			LOG("Update throughput done\n");
 		}
 	}
@@ -160,7 +160,7 @@ int start_with(char *src, char *dst){
 	return 1;
 }
 	
-int write_f4m_nolist(char *src,int offset, char *newbuffer){
+int write_f4m_nolist(char *src,int offset, char *newbuffer, proxy_session_list_t *list_node){
 	int i;
 	char headbuffer[MAX_LENGTH];
 	char buffer[256000];
@@ -174,27 +174,53 @@ int write_f4m_nolist(char *src,int offset, char *newbuffer){
 	int read_length = 0;
 	int total = 0;
 	int write_offset = 0;
+	int no_write = 0;
 	char line[MAX_LENGTH];
 	memset(line,0,MAX_LENGTH);
 	while( (read_length = read_line( line, xml_start + total, MAX_LENGTH)) > 0){
 		if( 1 == start_with(line, "bitrate") ){
+			// sample line is bitrate="100"
+			char bitrate[10];
+			int i,j;
+			for(i = 0; i < strlen(line); i ++){
+				if( line[i] == '"') break;
+			}
+			for( i = i + 1, j = 0; i < strlen(line);i ++,j ++){
+				bitrate[j] = line[i];
+			}
+			bitrate[j] = 0;
+			int sample_rate = atoi(bitrate);
+			for(i = 0;i < 10; i ++){
+				if( list_node->session.bitrate[i] == -1 ){
+					list_node->session.bitrate[i] = sample_rate;
+					break;
+				}
+			}
 		}
 		else if( 1 == start_with(line, "</media>") ){
-			memcpy( buffer + write_offset ,line, read_length);
-			write_offset += read_length;
+			if( no_write == 0){
+				memcpy( buffer + write_offset ,line, read_length);
+				write_offset += read_length;
+			}
+			//break;
+			no_write = 1;
+		}
+		else if(1 == start_with(line, "</manifest>")){
+			char *end_manifest = "</manifest>";
+			memcpy(buffer + write_offset, end_manifest, strlen(end_manifest));
+			write_offset += strlen(end_manifest);
 			break;
 		}
 		else{
-			memcpy(buffer + write_offset, line, read_length);
-			write_offset += read_length;
+			if(no_write == 0){
+				memcpy(buffer + write_offset, line, read_length);
+				write_offset += read_length;
+			}
 		}
 		total += read_length;	
 		memset(line, 0, MAX_LENGTH);
 	}
-	char *end_manifest = "</manifest>";
-	memcpy(buffer + write_offset, end_manifest, strlen(end_manifest));
-	write_offset += strlen(end_manifest);
-	
+	printf("END F4M\n");	
 	
 	memset(line, 0 ,MAX_LENGTH);
 	total = 0;
@@ -223,7 +249,7 @@ int write_f4m_nolist(char *src,int offset, char *newbuffer){
 	return buffer_offset + write_offset;
 }
 
-int parse_f4m_response(char *buffer, int total_read, char *newbuffer){
+int parse_f4m_response(char *buffer, int total_read, char *newbuffer, proxy_session_list_t *list_node){
 	char line[MAX_LENGTH];
 	memset(line, 0, MAX_LENGTH);
 	int read_length = 0;
@@ -238,7 +264,7 @@ int parse_f4m_response(char *buffer, int total_read, char *newbuffer){
 				return -2;
 			}
 			else if( strcmp(type, "text/xml") == 0){
-				return write_f4m_nolist(buffer , total + 1, newbuffer);
+				return write_f4m_nolist(buffer , total + 1, newbuffer, list_node);
 			}
 			else{ 
 				LOG("Parse: type = %s\n",type);

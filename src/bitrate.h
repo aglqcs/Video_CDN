@@ -23,7 +23,7 @@ typedef struct chunk_tracker_list{
 double est_tp(double alpha, double curr_tp, struct timeval ts, double buck_size);
 chunk_tracker_list_t* create_tracker(char* file, proxy_session_list_t* node);
 chunk_tracker_list_t* search_seg(proxy_session_list_t* pl);
-void update_bitrate(char* buffer, double throughput);
+void update_bitrate(char* buffer, double throughput, proxy_session_list_t* node);
 void update_throughput(double alpha, double buck_size, proxy_session_list_t* node);
 
 #endif

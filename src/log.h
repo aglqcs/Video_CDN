@@ -9,4 +9,7 @@ char *const_log_file_path;
 void LOG(const char *format, ...);
 void LOG_start();
 
+
+void TEST_LOG(const char *format, ...);
+void TEST_LOG_start(char *path);
 #endif

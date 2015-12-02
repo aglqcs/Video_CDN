@@ -29,6 +29,7 @@ fd_set ready_to_read, ready_to_write;
 typedef struct proxy_session{
 	int client_fd;
 	int server_fd;
+	int bitrate[10];
 } proxy_session_t;
 
 typedef struct proxy_session_list{
