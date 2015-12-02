@@ -8,32 +8,34 @@ double est_tp(double alpha, double curr_tp, struct timeval ts, double buck_size)
 	struct timeval tval_result, tf;
 	gettimeofday(&tf, NULL);
 	timersub(&tf, &ts, &tval_result);
-	double tdiff = (double)tval_result.tv_sec + (double)tval_result.tv_usec / 1000;
+	double tdiff = (double)tval_result.tv_sec + (double)tval_result.tv_usec / 1000000;
 
-	double new_tp = buck_size / tdiff;
+	double new_tp = buck_size / tdiff / 1000;
 	return new_tp * alpha + curr_tp * (1 - alpha); 
 }
 
 chunk_tracker_list_t* create_tracker(char* file, proxy_session_list_t* node){
 	int seg;
 	int frag;
+	int init_bitrate;
 		
-	if(2 != sscanf(file, "%*sSeg%d-Frag%d", &seg, &frag)){
+	if(3 != sscanf(file, "/vod/%dSeg%d-Frag%d", &init_bitrate, &seg, &frag)){
 		LOG("This is not video chunks, ignore it\n");
 		return NULL;
 	}
 
-	chunk_tracker_list_t* tracker_list = search_seg(seg, node);
+	chunk_tracker_list_t* tracker_list = search_seg(node);
 	if(tracker_list == NULL){
 		LOG("This is a new chunk, create new list\n");
 		tracker_list = (chunk_tracker_list_t *)malloc( sizeof(chunk_tracker_list_t));
 		tracker_list->next = NULL;
 		tracker_list->ps = node;
-		tracker_list->segmentation = seg;
 		tracker_list->throughput = 10;
 		tracker_list->chunks = NULL;
-		if(tracker_head == NULL)
+		if(tracker_head == NULL){
+			tracker_list->next = NULL;
 			tracker_head = tracker_list;
+		}
 		else{
 			tracker_list->next = tracker_head;
 			tracker_head = tracker_list;
@@ -41,12 +43,11 @@ chunk_tracker_list_t* create_tracker(char* file, proxy_session_list_t* node){
 	}
 
 	chunk_tracker_t *new_tracker = (chunk_tracker_t *)malloc( sizeof(chunk_tracker_t));
-	new_tracker->fragment = frag;
 	gettimeofday(&new_tracker->start_time, NULL);
 
 	if(tracker_list->chunks == NULL){
 		tracker_list->chunks = new_tracker;
-		tracker_list->chunks->next = NULL;
+		new_tracker->next = NULL;
 	}
 	else{
 		new_tracker->next = tracker_list->chunks;
@@ -55,20 +56,26 @@ chunk_tracker_list_t* create_tracker(char* file, proxy_session_list_t* node){
 	return tracker_list;
 }
 
-chunk_tracker_list_t* search_seg(int seg, proxy_session_list_t* pl){
-	if(tracker_head == NULL)
+chunk_tracker_list_t* search_seg(proxy_session_list_t* pl){
+	if(tracker_head == NULL){
+		LOG("search_seg is NULL\n");
 		return NULL;
+	}
 	chunk_tracker_list_t *node;
 	for(node=tracker_head; node!=NULL; node=node->next){
-		if(seg == node->segmentation && node->ps->session.client_fd == pl->session.client_fd && node->ps->session.server_fd == pl->session.server_fd)
+		if(node->ps->session.client_fd == pl->session.client_fd && node->ps->session.server_fd == pl->session.server_fd){
+			LOG("search_seg is not NULL\n");
 			return node;
+		}
 	}
+	LOG("search_seg is NULL, but tracker_head is not NULL\n");
 	return NULL;
 }
 
 void update_bitrate(char* buffer, double throughput){
 	char first[8192];
 	char second[8192];
+	int init_bitrate;
 	double rate = 10;
 	double rates[4] = {10, 50, 100, 500};
 	int i;
@@ -79,30 +86,48 @@ void update_bitrate(char* buffer, double throughput){
 		}
 	}
 	// Retrieve the value of first and second part of string except bitrate
-	sscanf(buffer, "%s%*d%s", first, second);
+	// sscanf(buffer, "%[] %d %[]", first, &init_bitrate, second);
+	char *result = strstr(buffer, "Seg");
+	strcpy(second, result);
+	while(*result != '/'){
+		result--;
+	}
+	LOG("first string length: %d\n", result-buffer+1);
+	strncpy(first, buffer, (result-buffer+1));
+	LOG("buffer: %s\n", buffer);
+	LOG("first: %s\n", first);
+	LOG("second: %s\n", second);
 	// Convert bit rate from it to string
 	char bit_rate[5];
 	sprintf(bit_rate, "%d", (int)rate);
 	strcpy(buffer, "");
 	strcat(buffer, first);
 	strcat(buffer, bit_rate);
+	printf("bitrate: %s\n", bit_rate);
 	strcat(buffer, second);
 	return;
 }
 
-void update_throughput(double alpha, double buck_size, proxy_session_list_t* node, int seg, int frag){
-	chunk_tracker_list_t* tracker_list = search_seg(seg, node);
+void update_throughput(double alpha, double buck_size, proxy_session_list_t* node){
+	LOG("Update throughput\n");
+	chunk_tracker_list_t* tracker_list = search_seg(node);
 	chunk_tracker_t *tracker;
 	chunk_tracker_t *tmp_tracker = NULL;
-	for(tracker = tracker_list->chunks; tracker!=NULL; tracker = tracker->next){
-		if(tracker->fragment == frag){
+	for(tracker = tracker_list->chunks; tracker->next !=NULL; tracker = tracker->next);
+	//{
+		//if(tracker->next == NULL){
 			tracker_list->throughput = est_tp(alpha, tracker_list->throughput, tracker->start_time, buck_size);
-			tmp_tracker->next = tracker->next;
-			free(tracker);
+			LOG("New throughput is %lf\n", tracker_list->throughput);
+			printf("New throughput is %lf\n", tracker_list->throughput);
+			if(tmp_tracker != NULL)
+				tmp_tracker->next = NULL;
+			LOG("Try to free tracker\n");
+			//free(tracker);
+			LOG("free tracker\n");
 			return;
-		}
+		//}
 		tmp_tracker = tracker;
-	}
+	//}
 	LOG("update_throughput: Shouldn't come here\n");
 }
 

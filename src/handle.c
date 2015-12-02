@@ -62,10 +62,12 @@ void handle_client_recv(proxy_session_list_t *node){
 	char http_method[8];
 	char http_request_file[128];
 	char http_version[16];
-
+	LOG("==============start parsing client input=============\n");
 	sscanf(buffer, "%s %s %s", http_method, http_request_file, http_version);
+	LOG("http_request_file:%s\n", http_request_file);
 	if(strncmp(http_method, "GET", 3) != 0 || strncmp(http_version, "HTTP/1.1", 8) != 0){
 		LOG("http_method %s || http_version %s is not correct\n", http_method, http_version);
+		LOG("buffer: %s--------------\n", buffer);
 		return;
 	}
 
@@ -110,7 +112,7 @@ void handle_server_recv(proxy_session_list_t *node){
 	}
 	int parse_ret = parse_f4m_response(big_buffer, total_read, new_buffer);
 	int ret_write = 0;
-	if( parse_ret != -1 || parse_ret != -2 ){
+	if( parse_ret != -1 && parse_ret != -2 ){
 		ret_write = write(node->session.client_fd, new_buffer,parse_ret);
 		LOG("f4m ret_write = %d\n",ret_write);
 	}
@@ -119,12 +121,14 @@ void handle_server_recv(proxy_session_list_t *node){
 		LOG("data ret_write = %d\n",ret_write);
 		// Update the throughput once get all the data
 		if(parse_ret == -2){
-			int seg;
-			int frag;   
-			if(2 != sscanf(big_buffer, "%*sSeg%d-Frag%d", &seg, &frag))
-				LOG("This is not video chunks, ignore it\n");
-			update_throughput(0.3, ret_write, node, seg, frag);
-			LOG("Update throughput\n");
+			char *type = strstr(big_buffer, "Content-Type: video/f4f");
+
+			if(type == NULL)
+				LOG("is is not video chunks, ignore it\n");
+			else
+				LOG("this is video chunks from server\n");
+			update_throughput(0.3, ret_write, node);
+			LOG("Update throughput done\n");
 		}
 	}
 	LOG("Exit handle_server_recv() last ret_read = %d total_recv = %d\n", ret_read, total_read);
