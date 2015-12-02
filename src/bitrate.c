@@ -8,21 +8,27 @@ double est_tp(double alpha, double curr_tp, struct timeval ts, double buck_size)
 	struct timeval tval_result, tf;
 	gettimeofday(&tf, NULL);
 	timersub(&tf, &ts, &tval_result);
-	double tdiff = (double)tval_result.tv_sec + (double)tval_result.tv_usec / 1000000;
+	double tdiff = (double)tval_result.tv_sec + (double)tval_result.tv_usec / 1000000000;
 
-	double new_tp = buck_size / tdiff / 1000;
+	double new_tp = buck_size*8 / tdiff / 1024;
+	printf("tdiff: %lf\n", tdiff);
+	printf("buck_size: %lf\n", buck_size);
+	// LOG("new_tp: %lf\n", new_tp);
+	printf("new_tp: %lf\n", new_tp);
 	return new_tp * alpha + curr_tp * (1 - alpha); 
 }
 
 chunk_tracker_list_t* create_tracker(char* file, proxy_session_list_t* node){
-	int seg;
-	int frag;
-	int init_bitrate;
-		
-	if(3 != sscanf(file, "/vod/%dSeg%d-Frag%d", &init_bitrate, &seg, &frag)){
+	
+	if(strstr(file, "-Frag") == NULL){	
 		LOG("This is not video chunks, ignore it\n");
 		return NULL;
 	}
+	/*
+	if(3 != sscanf(file, "/vod/%dSeg%d-Frag%d", &init_bitrate, &seg, &frag)){
+		LOG("This is not video chunks, ignore it\n");
+		return NULL;
+	} */
 
 	chunk_tracker_list_t* tracker_list = search_seg(node);
 	if(tracker_list == NULL){
@@ -75,7 +81,6 @@ chunk_tracker_list_t* search_seg(proxy_session_list_t* pl){
 void update_bitrate(char* buffer, double throughput){
 	char first[8192];
 	char second[8192];
-	int init_bitrate;
 	double rate = 10;
 	double rates[4] = {10, 50, 100, 500};
 	int i;
@@ -92,11 +97,7 @@ void update_bitrate(char* buffer, double throughput){
 	while(*result != '/'){
 		result--;
 	}
-	LOG("first string length: %d\n", result-buffer+1);
 	strncpy(first, buffer, (result-buffer+1));
-	LOG("buffer: %s\n", buffer);
-	LOG("first: %s\n", first);
-	LOG("second: %s\n", second);
 	// Convert bit rate from it to string
 	char bit_rate[5];
 	sprintf(bit_rate, "%d", (int)rate);
@@ -113,21 +114,18 @@ void update_throughput(double alpha, double buck_size, proxy_session_list_t* nod
 	chunk_tracker_list_t* tracker_list = search_seg(node);
 	chunk_tracker_t *tracker;
 	chunk_tracker_t *tmp_tracker = NULL;
-	for(tracker = tracker_list->chunks; tracker->next !=NULL; tracker = tracker->next);
-	//{
-		//if(tracker->next == NULL){
-			tracker_list->throughput = est_tp(alpha, tracker_list->throughput, tracker->start_time, buck_size);
-			LOG("New throughput is %lf\n", tracker_list->throughput);
-			printf("New throughput is %lf\n", tracker_list->throughput);
-			if(tmp_tracker != NULL)
-				tmp_tracker->next = NULL;
-			LOG("Try to free tracker\n");
-			//free(tracker);
-			LOG("free tracker\n");
-			return;
-		//}
+	for(tracker = tracker_list->chunks; tracker->next !=NULL; tracker = tracker->next){
 		tmp_tracker = tracker;
-	//}
-	LOG("update_throughput: Shouldn't come here\n");
+	}
+	tracker_list->throughput = est_tp(alpha, tracker_list->throughput, tracker->start_time, buck_size);
+	LOG("New throughput is %lf\n", tracker_list->throughput);
+	printf("New throughput is %lf\n", tracker_list->throughput);
+	if(tmp_tracker != NULL)
+		tmp_tracker->next = NULL;
+		
+	//free(tracker);
+
+	LOG("free tracker\n");
+	return;
 }
 
