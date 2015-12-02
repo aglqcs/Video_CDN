@@ -137,6 +137,7 @@ void handle_server_recv(char* ip, double alpha, proxy_session_list_t *node){
 	LOG("Exit handle_server_recv() last ret_read = %d total_recv = %d\n", ret_read, total_read);
     FD_CLR(node->session.server_fd, &ready_to_read);
 	FD_CLR(node->session.client_fd, &ready_to_read);
+	close(node->session.client_fd);
 }
 
 int read_line(char *dst, char *src, int size){
