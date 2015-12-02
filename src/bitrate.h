@@ -1,14 +1,14 @@
 #ifndef _BITRAT_H__
 #define _BITRAT_H__
 
-#include <time.h>
+#include <sys/time.h>
 #include "proxy.h"
 #include "log.h"
 #include <stdlib.h>
 #include <stdio.h>
 
 typedef struct chunk_tracker{
-	time_t start_time;
+	struct timeval start_time;
 	int fragment;
 	struct chunk_tracker *next;
 } chunk_tracker_t;
@@ -22,7 +22,7 @@ typedef struct chunk_tracker_list{
 } chunk_tracker_list_t;
 
 
-double est_tp(double alpha, double curr_tp, time_t ts, time_t tf, double buck_size);
+double est_tp(double alpha, double curr_tp, struct timeval ts, double buck_size);
 chunk_tracker_list_t* create_tracker(char* file, proxy_session_list_t* node);
 chunk_tracker_list_t* search_seg(int seg, proxy_session_list_t* pl);
 void update_bitrate(char* buffer, double throughput);

@@ -1,10 +1,16 @@
 #include "bitrate.h"
-
+ 
 chunk_tracker_list_t *tracker_head = NULL;
 
 // Estimate throughput
-double est_tp(double alpha, double curr_tp, time_t ts, time_t tf, double buck_size){
-	double new_tp = buck_size / difftime(tf, ts);
+double est_tp(double alpha, double curr_tp, struct timeval ts, double buck_size){
+	// Calculate time
+	struct timeval tval_result, tf;
+	gettimeofday(&tf, NULL);
+	timersub(&tf, &ts, &tval_result);
+	double tdiff = (double)tval_result.tv_sec + (double)tval_result.tv_usec / 1000;
+
+	double new_tp = buck_size / tdiff;
 	return new_tp * alpha + curr_tp * (1 - alpha); 
 }
 
@@ -36,7 +42,7 @@ chunk_tracker_list_t* create_tracker(char* file, proxy_session_list_t* node){
 
 	chunk_tracker_t *new_tracker = (chunk_tracker_t *)malloc( sizeof(chunk_tracker_t));
 	new_tracker->fragment = frag;
-	new_tracker->start_time = time(NULL);
+	gettimeofday(&new_tracker->start_time, NULL);
 
 	if(tracker_list->chunks == NULL){
 		tracker_list->chunks = new_tracker;
@@ -90,7 +96,7 @@ void update_throughput(double alpha, double buck_size, proxy_session_list_t* nod
 	chunk_tracker_t *tmp_tracker = NULL;
 	for(tracker = tracker_list->chunks; tracker!=NULL; tracker = tracker->next){
 		if(tracker->fragment == frag){
-			tracker_list->throughput = est_tp(alpha, tracker_list->throughput, tracker->start_time, time(NULL), buck_size);
+			tracker_list->throughput = est_tp(alpha, tracker_list->throughput, tracker->start_time, buck_size);
 			tmp_tracker->next = tracker->next;
 			free(tracker);
 			return;
