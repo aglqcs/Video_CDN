@@ -8,7 +8,7 @@
 
 int parse_f4m_response(char *, int, char *, proxy_session_list_t *);
 void handle_client_recv(proxy_session_list_t *node);
-void handle_server_recv(float alpha, proxy_session_list_t *node);
+void handle_server_recv(char* ip, float alpha, proxy_session_list_t *node);
 int connect_to_server();
 
 #endif

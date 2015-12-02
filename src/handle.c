@@ -66,8 +66,7 @@ void handle_client_recv(proxy_session_list_t *node){
 	sscanf(buffer, "%s %s %s", http_method, http_request_file, http_version);
 	LOG("http_request_file:%s\n", http_request_file);
 	if(strncmp(http_method, "GET", 3) != 0 || strncmp(http_version, "HTTP/1.1", 8) != 0){
-		LOG("http_method %s || http_version %s is not correct\n", http_method, http_version);
-		LOG("buffer: %s--------------\n", buffer);
+		LOG("error parsing data\n");
 		return;
 	}
 
@@ -75,7 +74,7 @@ void handle_client_recv(proxy_session_list_t *node){
 	
 	if((tl=create_tracker(http_request_file, node)) != NULL){
 		LOG("Video chunk file\n");
-		update_bitrate(buffer, tl->throughput, node);
+		update_bitrate(buffer, tl, node);
 	}
    
 	int ret_write = write(connect, buffer, ret_read);
@@ -93,7 +92,7 @@ void handle_client_recv(proxy_session_list_t *node){
 	LOG("ending client_Recv()\n");
 }
 
-void handle_server_recv(float alpha, proxy_session_list_t *node){
+void handle_server_recv(char* ip, float alpha, proxy_session_list_t *node){
 	LOG("\n\nIn handle_server_recv()\n");
 	int fd = node->session.server_fd;
 	int total_read = 0;
@@ -104,6 +103,9 @@ void handle_server_recv(float alpha, proxy_session_list_t *node){
 	memset(big_buffer, 0 , 256000);
 	memset(new_buffer, 0 ,256000);
     int ret_read = -1;
+	// Start timer
+	struct timeval ts;
+	gettimeofday(&ts, NULL);
 	while( (ret_read = read(fd, buffer, MAX_LENGTH))  > 0 ){
 		LOG("ret_read = %d\n", ret_read);
 		memcpy(big_buffer + total_read, buffer, ret_read);
@@ -117,8 +119,6 @@ void handle_server_recv(float alpha, proxy_session_list_t *node){
 		LOG("f4m ret_write = %d\n",ret_write);
 	}
 	else{
-		ret_write = write(node->session.client_fd, big_buffer, total_read);
-		LOG("data ret_write = %d\n",ret_write);
 		// Update the throughput once get all the data
 		if(parse_ret == -2){
 			char *type = strstr(big_buffer, "Content-Type: video/f4f");
@@ -127,9 +127,11 @@ void handle_server_recv(float alpha, proxy_session_list_t *node){
 				LOG("is is not video chunks, ignore it\n");
 			else
 				LOG("this is video chunks from server\n");
-			update_throughput(alpha, ret_write, node);
+			update_throughput(alpha, total_read, node, ip, ts);
 			LOG("Update throughput done\n");
 		}
+		ret_write = write(node->session.client_fd, big_buffer, total_read);
+		LOG("data ret_write = %d\n",ret_write);
 	}
 	LOG("Exit handle_server_recv() last ret_read = %d total_recv = %d\n", ret_read, total_read);
     FD_CLR(node->session.server_fd, &ready_to_read);

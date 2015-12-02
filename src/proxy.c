@@ -94,7 +94,7 @@ int main(int argc, char* argv[]){
                // handle_client_send();                
             }
             if (FD_ISSET(p->session.server_fd, &ready_to_read)) {
-                handle_server_recv(alpha, p);                
+                handle_server_recv(www_ip, alpha, p);                
             }
             if (FD_ISSET(p->session.server_fd, &ready_to_write)) {
                 LOG("4\n");
