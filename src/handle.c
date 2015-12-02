@@ -93,7 +93,7 @@ void handle_client_recv(proxy_session_list_t *node){
 	LOG("ending client_Recv()\n");
 }
 
-void handle_server_recv(char* ip, float alpha, proxy_session_list_t *node){
+void handle_server_recv(char* ip, double alpha, proxy_session_list_t *node){
 	LOG("\n\nIn handle_server_recv()\n");
 	int fd = node->session.server_fd;
 	int total_read = 0;

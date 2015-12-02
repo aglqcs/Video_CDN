@@ -17,7 +17,7 @@
 #define MAX_LENGTH 8192 
 
 char *log_file;
-float alpha;
+double alpha;
 int listen_port;
 char *fake_ip;
 char *dns_ip;

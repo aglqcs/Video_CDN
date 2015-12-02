@@ -17,7 +17,7 @@ double est_tp(double alpha, double curr_tp, struct timeval ts, double buck_size,
 	printf("buck_size: %lf\n", buck_size);
 	// LOG("new_tp: %lf\n", new_tp);
 	printf("new_tp: %lf\n", new_tp);
-	return new_tp * alpha + curr_tp * (1 - alpha); 
+	return (new_tp * alpha + curr_tp * (1 - alpha))*10; 
 }
 
 chunk_tracker_list_t* create_tracker(char* file, proxy_session_list_t* node){
