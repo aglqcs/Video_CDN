@@ -45,6 +45,7 @@ void handle_client_recv(proxy_session_list_t *node){
     int ret_read = read(fd, buffer, MAX_LENGTH);
     if( ret_read < 0){
 		LOG("handle_client_recv() fd = %d, errno = %d\n",fd, errno );
+		close(fd);
 		return;
 	}
     int connect;
@@ -135,6 +136,7 @@ void handle_server_recv(char* ip, float alpha, proxy_session_list_t *node){
 	}
 	LOG("Exit handle_server_recv() last ret_read = %d total_recv = %d\n", ret_read, total_read);
     FD_CLR(node->session.server_fd, &ready_to_read);
+	FD_CLR(node->session.client_fd, &ready_to_read);
 }
 
 int read_line(char *dst, char *src, int size){

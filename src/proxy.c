@@ -53,7 +53,7 @@ int main(int argc, char* argv[]){
 
     while(1){
         int select_count = select( FD_SETSIZE, &ready_to_read, &ready_to_write, NULL, NULL);
-        LOG("select_count = %d\n", select_count);
+        LOG(" server_sock = %d select_count = %d\n", server_sockfd, select_count);
         if( select_count < 0){
             // select error
 			continue;
