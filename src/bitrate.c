@@ -3,12 +3,15 @@
 chunk_tracker_list_t *tracker_head = NULL;
 
 // Estimate throughput
-double est_tp(double alpha, double curr_tp, struct timeval ts, double buck_size, double *tput, double *duration){
+double est_tp(double alpha, double curr_tp, struct timespec ts, double buck_size, double *tput, double *duration){
 	// Calculate time
-	struct timeval tval_result, tf;
-	gettimeofday(&tf, NULL);
-	timersub(&tf, &ts, &tval_result);
-	double tdiff = (double)tval_result.tv_sec + (double)tval_result.tv_usec / 1000000;
+	struct timespec tval_result, tf;
+	clock_gettime(CLOCK_MONOTONIC, &tf);	/* mark the end time */
+	// gettimeofday(&tf, NULL);
+	// timersub(&tf, &ts, &tval_result);
+	uint64_t diff = BILLION * (tf.tv_sec - ts.tv_sec) + tf.tv_nsec - ts.tv_nsec;
+	double tdiff = (double)diff/(double)1000000000;
+	// double tdiff = (double)tval_result.tv_sec + (double)tval_result.tv_usec / 1000000;
 
 	double new_tp = buck_size*8 / tdiff / 1024;
 	*tput = new_tp;
@@ -76,11 +79,6 @@ chunk_tracker_list_t* search_seg(proxy_session_list_t* pl){
 	}
 	chunk_tracker_list_t *node;
 	for(node=tracker_head; node!=NULL; node=node->next){
-		printf("==================================================\n");
-		printf("node->ps->session.client_fd: %d, server_fd: %d\n", node->ps->session.client_fd, node->ps->session.server_fd);
-		printf("pl->session.client_fd: %d, server_fd: %d\n", pl->session.client_fd, pl->session.server_fd);
-		printf("==================================================\n");
-		
 		//if(node->ps->session.client_fd == pl->session.client_fd && node->ps->session.server_fd == pl->session.server_fd){
 		if(node->ps->session.client_fd == pl->session.client_fd){
 			LOG("search_seg is not NULL\n");
@@ -125,7 +123,7 @@ void update_bitrate(char* buffer, chunk_tracker_list_t *tl, proxy_session_list_t
 	}
 	strncpy(first, buffer, (result-buffer+1));
 	// Convert bit rate from it to string
-	char bit_rate[50];
+	char bit_rate[20];
 	sprintf(bit_rate, "%d", (int)rate);
 
 	printf("%s\n",bit_rate);
@@ -135,10 +133,23 @@ void update_bitrate(char* buffer, chunk_tracker_list_t *tl, proxy_session_list_t
 	strcat(buffer, bit_rate);
 	printf("bitrate: %s\n", bit_rate);
 	strcat(buffer, second);
+
+	char *http = strstr(buffer, "HTTP/1.1");
+	http--;
+	char tmp[48];
+	int pos = http - buffer -4;
+	if(pos > 48)
+		LOG("ERROR: not possible to assign new file name\n");
+	strncpy(tmp, (buffer+4), pos);
+	memset(tl->chunks->file, 0, 48);
+	strncpy(tl->chunks->file, tmp, 48);
+
+	printf("+++++++++++++++++tmp: %s\n", tmp);
+	printf("---tl->chunks->file: %s\n", tl->chunks->file);
 	return;
 }
 
-void update_throughput(double alpha, double buck_size, proxy_session_list_t* node, char *ip, struct timeval ts){
+void update_throughput(double alpha, double buck_size, proxy_session_list_t* node, char *ip, struct timespec ts){
 	double throughput, duration;
 	LOG("Update throughput\n");
 	chunk_tracker_list_t* tracker_list = search_seg(node);

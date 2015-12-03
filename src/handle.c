@@ -117,8 +117,8 @@ void handle_server_recv(char* ip, double alpha, proxy_session_list_t *node){
 	memset(new_buffer, 0 ,256000);
     int ret_read = -1;
 	// Start timer
-	struct timeval ts;
-	gettimeofday(&ts, NULL);
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);	/* mark start time */
 	while( (ret_read = read(fd, buffer, MAX_LENGTH))  > 0 ){
 		LOG("ret_read = %d\n", ret_read);
 		memcpy(big_buffer + total_read, buffer, ret_read);
