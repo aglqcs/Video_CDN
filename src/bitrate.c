@@ -17,7 +17,8 @@ double est_tp(double alpha, double curr_tp, struct timeval ts, double buck_size,
 	printf("buck_size: %lf\n", buck_size);
 	// LOG("new_tp: %lf\n", new_tp);
 	printf("new_tp: %lf\n", new_tp);
-	return (new_tp * alpha + curr_tp * (1 - alpha))*10; 
+	// return (new_tp * alpha + curr_tp * (1 - alpha))*10; 
+	return new_tp * alpha + curr_tp * (1 - alpha); 
 }
 
 chunk_tracker_list_t* create_tracker(char* file, proxy_session_list_t* node){
@@ -35,11 +36,12 @@ chunk_tracker_list_t* create_tracker(char* file, proxy_session_list_t* node){
 	chunk_tracker_list_t* tracker_list = search_seg(node);
 	if(tracker_list == NULL){
 		LOG("This is a new chunk, create new list\n");
+		printf("This is a new chunk, create new list\n");
 		tracker_list = (chunk_tracker_list_t *)malloc( sizeof(chunk_tracker_list_t));
 		tracker_list->next = NULL;
 		tracker_list->ps = node;
-		tracker_list->throughput = 10;
-		tracker_list->bitrate = 10;
+		tracker_list->throughput = 100;
+		tracker_list->bitrate = 100;
 		tracker_list->chunks = NULL;
 		if(tracker_head == NULL){
 			tracker_list->next = NULL;
@@ -69,35 +71,51 @@ chunk_tracker_list_t* create_tracker(char* file, proxy_session_list_t* node){
 chunk_tracker_list_t* search_seg(proxy_session_list_t* pl){
 	if(tracker_head == NULL){
 		LOG("search_seg is NULL\n");
+		printf("search_seg is NULL\n");
 		return NULL;
 	}
 	chunk_tracker_list_t *node;
 	for(node=tracker_head; node!=NULL; node=node->next){
-		if(node->ps->session.client_fd == pl->session.client_fd && node->ps->session.server_fd == pl->session.server_fd){
+		printf("==================================================\n");
+		printf("node->ps->session.client_fd: %d, server_fd: %d\n", node->ps->session.client_fd, node->ps->session.server_fd);
+		printf("pl->session.client_fd: %d, server_fd: %d\n", pl->session.client_fd, pl->session.server_fd);
+		printf("==================================================\n");
+		
+		//if(node->ps->session.client_fd == pl->session.client_fd && node->ps->session.server_fd == pl->session.server_fd){
+		if(node->ps->session.client_fd == pl->session.client_fd){
 			LOG("search_seg is not NULL\n");
 			return node;
 		}
 	}
 	LOG("search_seg is NULL, but tracker_head is not NULL\n");
+	printf("search_seg is NULL, but tracker_head is not NULL\n");
 	return NULL;
 }
 
 void update_bitrate(char* buffer, chunk_tracker_list_t *tl, proxy_session_list_t* node){
 	char first[8192];
 	char second[8192];
-	double rate = 10;
+	double rate = 100;
+	//
+	double rate_get[4] = {10, 100, 500, 1000};
 	double throughput = tl->throughput;
+	printf("throughput: %lf\n", throughput);
 	int i;
-	for(i=9; i>=0; i--){
-		if(node->session.bitrate[i] == -1)
-			continue;
-		if(node->session.bitrate[i]*1.5 <= throughput){
-			rate = (double)node->session.bitrate[i];
+	for(i=3; i>=0; i--){
+		// if(node->session.bitrate[i] == -1)
+		// 	continue;
+		//if((double)node->session.bitrate[i]*1.5 <= throughput){
+		if(rate_get[i]*1.5 <= throughput){
+			rate = rate_get[i];
+			printf("---------------rate: %d--------------\n", (int)rate);
 			break;
 		}
 	}
 	// Update bitrate in chunk_tracker_list_t
 	tl->bitrate = (int)rate;
+	
+	tl->bitrate = rate_get[rand() % 4];
+	printf("Next rate = %d\n", tl->bitrate);
 
 	// Retrieve the value of first and second part of string except bitrate
 	char *result = strstr(buffer, "Seg");
@@ -107,8 +125,11 @@ void update_bitrate(char* buffer, chunk_tracker_list_t *tl, proxy_session_list_t
 	}
 	strncpy(first, buffer, (result-buffer+1));
 	// Convert bit rate from it to string
-	char bit_rate[5];
+	char bit_rate[50];
 	sprintf(bit_rate, "%d", (int)rate);
+
+	printf("%s\n",bit_rate);
+
 	strcpy(buffer, "");
 	strcat(buffer, first);
 	strcat(buffer, bit_rate);

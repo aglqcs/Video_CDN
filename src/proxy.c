@@ -60,7 +60,8 @@ int main(int argc, char* argv[]){
 			//return EXIT_FAILURE;
         }
         if( FD_ISSET(server_sockfd, &ready_to_read)){
-           	struct sockaddr_in client_addr;
+           	LOG("GET NEW CONNECTION\n");
+			struct sockaddr_in client_addr;
 		   	socklen_t size = sizeof(client_addr);
 			int client_fd = accept(server_sockfd, (struct sockaddr *)&client_addr, &size);
             if( client_fd < 0 ){

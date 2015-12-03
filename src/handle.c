@@ -1,5 +1,7 @@
 #include "handle.h"
 
+extern chunk_tracker_list_t* tracker_head;
+
 int connect_to_server(){
 	struct sockaddr_in server_addr, client_addr;
 	int client_fd;
@@ -39,6 +41,7 @@ int connect_to_server(){
 void handle_client_recv(proxy_session_list_t *node){
 	int fd = node->session.client_fd;
 
+	printf("\n\nhandle_client_recv fd = %d\n", fd);
 	LOG("\n\nhandle_client_recv fd = %d\n", fd);
     char buffer[MAX_LENGTH];
     memset(buffer, 0 , MAX_LENGTH);
@@ -58,6 +61,7 @@ void handle_client_recv(proxy_session_list_t *node){
     	return;
 	}
     LOG("connect = %d\n", connect);
+    node->session.server_fd = connect;
 	
 	// Parse the buffer
 	char http_method[8];
@@ -75,9 +79,17 @@ void handle_client_recv(proxy_session_list_t *node){
 	
 	if((tl=create_tracker(http_request_file, node)) != NULL){
 		LOG("Video chunk file\n");
+		printf("tl->throughput: %lf\n", tl->throughput);
 		update_bitrate(buffer, tl, node);
 	}
-   
+   	
+	sscanf(buffer, "%s %s %s", http_method, http_request_file, http_version);
+	LOG("MODIFIED http_request_file:%s\n", http_request_file);
+	if(strncmp(http_method, "GET", 3) != 0 || strncmp(http_version, "HTTP/1.1", 8) != 0){
+		LOG("error parsing data\n");
+		return;
+	}
+
 	int ret_write = write(connect, buffer, ret_read);
 	LOG("ret_write = %d\n%s", ret_write, buffer);
 	
@@ -89,12 +101,12 @@ void handle_client_recv(proxy_session_list_t *node){
  	if( ret_write > 0){
     	FD_SET(connect, &ready_to_read);
 	}
-    node->session.server_fd = connect;
 	LOG("ending client_Recv()\n");
 }
 
 void handle_server_recv(char* ip, double alpha, proxy_session_list_t *node){
 	LOG("\n\nIn handle_server_recv()\n");
+	printf("\n\nIn handle_server_recv()\n");
 	int fd = node->session.server_fd;
 	int total_read = 0;
 	char buffer[MAX_LENGTH ];
@@ -113,6 +125,7 @@ void handle_server_recv(char* ip, double alpha, proxy_session_list_t *node){
 		total_read += ret_read;
 		memset(buffer, 0, MAX_LENGTH);
 	}
+	LOG("%d\n\n%s", total_read ,big_buffer);
 	int parse_ret = parse_f4m_response(big_buffer, total_read, new_buffer, node);
 	int ret_write = 0;
 	if( parse_ret != -1 && parse_ret != -2 ){
@@ -129,11 +142,19 @@ void handle_server_recv(char* ip, double alpha, proxy_session_list_t *node){
 			else
 				LOG("this is video chunks from server\n");
 			update_throughput(alpha, total_read, node, ip, ts);
+			printf("tracker_head->throughput: %lf\n", tracker_head->throughput);
 			LOG("Update throughput done\n");
 		}
 		ret_write = write(node->session.client_fd, big_buffer, total_read);
+		FILE *ftmp = fopen("/tmp/record", "w");
+		int tmpp;
+		for(tmpp=0; tmpp<total_read; tmpp++){
+			fprintf(ftmp, "%c", big_buffer[tmpp]);
+		}
+		fclose(ftmp);
 		LOG("data ret_write = %d\n",ret_write);
 	}
+
 	LOG("Exit handle_server_recv() last ret_read = %d total_recv = %d\n", ret_read, total_read);
     FD_CLR(node->session.server_fd, &ready_to_read);
 	FD_CLR(node->session.client_fd, &ready_to_read);
@@ -195,6 +216,7 @@ int write_f4m_nolist(char *src,int offset, char *newbuffer, proxy_session_list_t
 			}
 			bitrate[j] = 0;
 			int sample_rate = atoi(bitrate);
+			LOG("available rate = %d\n", sample_rate);
 			for(i = 0;i < 10; i ++){
 				if( list_node->session.bitrate[i] == -1 ){
 					list_node->session.bitrate[i] = sample_rate;
