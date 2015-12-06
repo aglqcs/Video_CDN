@@ -12,4 +12,7 @@ void LOG_start();
 
 void TEST_LOG(const char *format, ...);
 void TEST_LOG_start(char *path);
+
+void N_LOG(const char *format, ...);
+void N_LOG_start(char *path);
 #endif
