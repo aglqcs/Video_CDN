@@ -89,7 +89,7 @@ int main(int argc, char* argv[]){
 			}
 			// socklen_t rem_len = 
 			// Check and parse the receive packet
-			handle_dns_request(buffer, recvlen, (struct sockaddr *)&remaddr, rr_flag, serv_list, &rr_ptr);
+			handle_dns_request(buffer, recvlen, (struct sockaddr *)&remaddr, rr_flag, serv_list, &rr_ptr, from_str);
 			printf("Curren rr_ptr: %s\n", rr_ptr->sname);
 		}
 	}
@@ -142,7 +142,7 @@ void translate_ip_to_hex(server_list_t* tmp){
 	}
 }
 
-void handle_dns_request(char* buffer, int recvlen, struct sockaddr* remaddr, int rr_flag, server_list_t *serv_list, server_list_t** rr_ptr){
+void handle_dns_request(char* buffer, int recvlen, struct sockaddr* remaddr, int rr_flag, server_list_t *serv_list, server_list_t** rr_ptr, char* from_str){
 	int head_len = sizeof(dns_header_t);
 	int resp_len = 0;
 	int send_len;
