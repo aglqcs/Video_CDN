@@ -13,7 +13,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
-
+#include <time.h>
 #define MAX_LENGTH 8192 
 
 char *log_file;
@@ -30,6 +30,7 @@ typedef struct proxy_session{
 	int client_fd;
 	int server_fd;
 	int bitrate[10];
+	struct timespec ts;
 } proxy_session_t;
 
 typedef struct proxy_session_list{
