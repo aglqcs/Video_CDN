@@ -139,6 +139,7 @@ int gen_dns_request(char *buffer, dns_packet_t *packeti, const char* node);
 void transfer_dns_name(const char* dns, char* buffer);
 int gen_error_pkt(char* buffer);
 int gen_resp_pkt(char* buffer, char* hex);
+void parse_response(char* buffer, int size, struct addrinfo* tmp_address);
 
 #endif
 
