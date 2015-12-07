@@ -6,6 +6,7 @@
 #include "proxy.h"
 #include "log.h"
 #include "handle.h"
+#include "mydns.h"
 
 proxy_session_list_t *head;
 
@@ -28,6 +29,12 @@ int main(int argc, char* argv[]){
 
     LOG_start();
 	TEST_LOG_start(log_file);
+	
+	// Initate dns listen
+	init_mydns(dns_ip, dns_port, fake_ip);
+	struct addrinfo *dnsinfo;
+	resolve("video.cs.cmu.edu", "9999", NULL, &dnsinfo);
+
     LOG("server listening on port = %d\n", listen_port);
     if((server_sockfd = socket(PF_INET, SOCK_STREAM, 0)) < 0){
         return EXIT_FAILURE;
