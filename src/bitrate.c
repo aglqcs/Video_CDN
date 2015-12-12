@@ -109,10 +109,10 @@ void update_bitrate(char* buffer, chunk_tracker_list_t *tl, proxy_session_list_t
 			break;
 		}
 	}
+
 	// Update bitrate in chunk_tracker_list_t
 	tl->bitrate = (int)rate;
 	
-	tl->bitrate = rate_get[rand() % 4];
 	printf("Next rate = %d\n", tl->bitrate);
 
 	// Retrieve the value of first and second part of string except bitrate
@@ -121,15 +121,16 @@ void update_bitrate(char* buffer, chunk_tracker_list_t *tl, proxy_session_list_t
 	while(*result != '/'){
 		result--;
 	}
-	strncpy(first, buffer, (result-buffer+1));
+	int first_offset = ( (int)(result-buffer)+1);
+	strncpy(first, buffer, first_offset);
 	// Convert bit rate from it to string
 	char bit_rate[20];
 	sprintf(bit_rate, "%d", (int)rate);
 
 	printf("%s\n",bit_rate);
-
-	strcpy(buffer, "");
-	strcat(buffer, first);
+//	strcpy(buffer, "");
+	memset(buffer, 0 , 8192);
+	strcpy(buffer, first);
 	strcat(buffer, bit_rate);
 	printf("bitrate: %s\n", bit_rate);
 	strcat(buffer, second);
@@ -141,7 +142,7 @@ void update_bitrate(char* buffer, chunk_tracker_list_t *tl, proxy_session_list_t
 	if(pos > 48)
 		LOG("ERROR: not possible to assign new file name\n");
 	strncpy(tmp, (buffer+4), pos);
-	memset(tl->chunks->file, 0, 48);
+	memset(tl->chunks->file, 0, 64);
 	strncpy(tl->chunks->file, tmp, 48);
 
 	printf("+++++++++++++++++tmp: %s\n", tmp);

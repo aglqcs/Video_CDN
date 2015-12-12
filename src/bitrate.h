@@ -10,7 +10,7 @@
 #define BILLION 1000000000L
 
 typedef struct chunk_tracker{
-	char file[48];
+	char file[64];
 	struct chunk_tracker *next;
 } chunk_tracker_t;
 

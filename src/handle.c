@@ -2,6 +2,7 @@
 
 extern chunk_tracker_list_t* tracker_head;
 
+
 int connect_to_server(){
 	struct sockaddr_in server_addr, client_addr;
 	int client_fd;
@@ -34,7 +35,11 @@ int connect_to_server(){
         close(client_fd);
         return -1;
     }
-
+	
+	int optval = 1;
+	if( setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(int)) < 0 ){
+		LOG("error set sock no delay");
+	}
 	return client_fd;
 }
 
@@ -80,6 +85,7 @@ void handle_client_recv(proxy_session_list_t *node){
 	if((tl=create_tracker(http_request_file, node)) != NULL){
 		LOG("Video chunk file\n");
 		printf("tl->throughput: %lf\n", tl->throughput);
+		clock_gettime(CLOCK_MONOTONIC, &(node->session.ts));	/* mark start time */
 		update_bitrate(buffer, tl, node);
 	}
    	
@@ -109,23 +115,58 @@ void handle_server_recv(char* ip, double alpha, proxy_session_list_t *node){
 	printf("\n\nIn handle_server_recv()\n");
 	int fd = node->session.server_fd;
 	int total_read = 0;
-	char buffer[MAX_LENGTH ];
-    char big_buffer[256000];
-	char new_buffer[256000];
-	memset(buffer, 0 , MAX_LENGTH );
-	memset(big_buffer, 0 , 256000);
-	memset(new_buffer, 0 ,256000);
+	char buffer[MAX_LENGTH];
+    char *big_buffer;
+	char *new_buffer;
+	memset(buffer, 0 ,MAX_LENGTH );
     int ret_read = -1;
 	// Start timer
-	struct timespec ts;
-	clock_gettime(CLOCK_MONOTONIC, &ts);	/* mark start time */
-	while( (ret_read = read(fd, buffer, MAX_LENGTH))  > 0 ){
+
+	time_t tmp_start = time(NULL);	
+/*	while( (ret_read = read(fd, buffer,6 *  MAX_LENGTH))  > 0 ){
+//	while( (ret_read = read(fd, buffer, MAX_LENGTH))  > 0 ){
 		LOG("ret_read = %d\n", ret_read);
 		memcpy(big_buffer + total_read, buffer, ret_read);
 		total_read += ret_read;
-		memset(buffer, 0, MAX_LENGTH);
+		memset(buffer, 0, 6 * MAX_LENGTH);
 	}
+	time_t tmp_end = time(NULL);
+	LOG("time difference read = %d\n", tmp_end - tmp_start );
 	LOG("%d\n\n%s", total_read ,big_buffer);
+*/
+	char ch;
+	int state = 0;
+	while( (ret_read = read( fd, &ch , 1)) > 0){
+		buffer[total_read] = ch;
+		total_read ++;
+		if( ch == '\r') {
+			if( state == 0) state ++;
+			if( state == 2) state ++;
+		}
+		else if( ch == '\n'){
+			if( state == 1) state ++;
+			if( state == 3) break;
+		}
+		else{
+			if( state == 2) state = 0;
+		}
+	}
+	int next_read = get_response_content_length(buffer);	
+	big_buffer = (char *)malloc( next_read + total_read);
+	new_buffer = (char *)malloc( next_read + total_read);
+	memset(big_buffer , 0 , next_read + total_read);
+	memset(new_buffer, 0 , next_read+total_read);
+	memcpy(big_buffer, buffer, total_read);
+
+//	int t = total_read + next_read;
+//	while( t > total_read ){
+//		total_read += read(fd, big_buffer + total_read, 8912);
+//	}
+	recv(fd, big_buffer + total_read, next_read, MSG_WAITALL);
+	total_read += next_read;
+	
+	printf("content-length = %d, total_read = %d", next_read, total_read);
+	
 	int parse_ret = parse_f4m_response(big_buffer, total_read, new_buffer, node);
 	int ret_write = 0;
 	if( parse_ret != -1 && parse_ret != -2 ){
@@ -141,17 +182,11 @@ void handle_server_recv(char* ip, double alpha, proxy_session_list_t *node){
 				LOG("is is not video chunks, ignore it\n");
 			else
 				LOG("this is video chunks from server\n");
-			update_throughput(alpha, total_read, node, ip, ts);
+			update_throughput(alpha, total_read, node, ip, node->session.ts);
 			printf("tracker_head->throughput: %lf\n", tracker_head->throughput);
 			LOG("Update throughput done\n");
 		}
 		ret_write = write(node->session.client_fd, big_buffer, total_read);
-		FILE *ftmp = fopen("/tmp/record", "w");
-		int tmpp;
-		for(tmpp=0; tmpp<total_read; tmpp++){
-			fprintf(ftmp, "%c", big_buffer[tmpp]);
-		}
-		fclose(ftmp);
 		LOG("data ret_write = %d\n",ret_write);
 	}
 
@@ -159,6 +194,8 @@ void handle_server_recv(char* ip, double alpha, proxy_session_list_t *node){
     FD_CLR(node->session.server_fd, &ready_to_read);
 	FD_CLR(node->session.client_fd, &ready_to_read);
 	close(node->session.client_fd);
+	free(big_buffer);
+	free(new_buffer);
 }
 
 int read_line(char *dst, char *src, int size){
@@ -185,14 +222,36 @@ int start_with(char *src, char *dst){
 	}
 	return 1;
 }
-	
+
+int get_response_content_length(char *buffer){
+	int length = 0;
+	char line[MAX_LENGTH];
+	memset(line, 0, MAX_LENGTH);
+	int readline = 0;
+	int total_read = 0;
+	while( (readline = read_line(line, buffer + total_read, MAX_LENGTH)) > 0 ){
+		total_read += readline;
+		if( 1 == start_with(line, "Content-Length:")){
+			char tmp_number[30];
+			int i,j;
+			for(i = 0, j = 16; line[j] != '\r' ; i ++, j ++){
+				tmp_number[i] = line[j];
+			} 
+			tmp_number[i] = '\0';
+			length = atoi(tmp_number);
+			break;
+		}
+		memset(line, 0 ,MAX_LENGTH);
+	} 
+	return length;
+}
 int write_f4m_nolist(char *src,int offset, char *newbuffer, proxy_session_list_t *list_node){
 	int i;
 	char headbuffer[MAX_LENGTH];
 	char buffer[256000];
 	memset(buffer, 0, 256000);
 	memset(headbuffer, 0 ,MAX_LENGTH);
-	for(i = 0; i < offset;  i ++){
+	for(i = 0; i < offset ;  i ++){
 		headbuffer[i] = src[i];
 	}
 
@@ -248,7 +307,6 @@ int write_f4m_nolist(char *src,int offset, char *newbuffer, proxy_session_list_t
 		memset(line, 0, MAX_LENGTH);
 	}
 	printf("END F4M\n");	
-	
 	memset(line, 0 ,MAX_LENGTH);
 	total = 0;
 	int buffer_offset = 0;
@@ -271,7 +329,9 @@ int write_f4m_nolist(char *src,int offset, char *newbuffer, proxy_session_list_t
 		memset(line, 0, MAX_LENGTH);
 		total += read_length;
 	}
-
+	newbuffer[buffer_offset] = '\r';
+	newbuffer[buffer_offset+1] = '\n';
+	buffer_offset += 1;
 	memcpy(newbuffer + buffer_offset, buffer, write_offset);
 	return buffer_offset + write_offset;
 }
