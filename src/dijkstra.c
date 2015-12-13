@@ -105,8 +105,6 @@ int graph_init(char *filename){
 			}
 		}
 	}
-	print_graph();
-	query_dns("1.0.0.1");
 	return 0;
 }
 
@@ -131,8 +129,9 @@ int exist_route(int src, int dst){
 	}
 	return INT_MAX;
 }
-int query_dns(char *src){
+server_list_t* query_dns(char *src, server_list_t *head){
   	// assign index for the list
+  	LOG("src = %s\n", src);
   	list_t *p;
 	
 	int src_index = -1;
@@ -164,12 +163,53 @@ int query_dns(char *src){
 			array[i][j] = exist_route(i,j);
 		}
 	}
-
-	
 	//call dijkstra
-	dijkstra( array, 0, count);
-	return 0;
+	int *dist = dijkstra( array, 0, count);
+	
+	/*
+	int min = INT_MAX;
+	for( i = 0;i < count; i ++){
+		min = min < dist[i] ? min : dist[i];
+		LOG("%d ", dist[i]);
+	}
+	LOG("\n");
+	for( i = 0; i < count; i ++){
+		if( dist[i] != min) continue;
+		for( p = graph_list; p != NULL; p = p->next){
+			if( p->index == i) break;
+		}
+		LOG("searching for %s\n", p->node.name.name_char);
+		server_list_t *q;
+		for( q = head; q != NULL ; q = q ->next){
+			LOG("matching %s\n", q->sname);
+			if( strcmp(q->sname, p->node.name.name_char) == 0 ){
+				return q;
+			}
+		}
+	}*/
+	int min = INT_MAX;
+	server_list_t *ret = NULL;
+	for( i = 0;i < count ;i ++){
+		for( p = graph_list; p != NULL; p = p->next){
+			if(p->index == i ) break;
+		}
+		server_list_t *q;
+		for( q = head; q!= NULL; q = q->next){
+			LOG("%s matching %s\n", q->sname, p->node.name.name_char);
+			if( strncmp(q->sname, p->node.name.name_char, strlen(p->node.name.name_char)) == 0){
+				// it is a server
+				LOG("server %s dist = %d\n", q->sname, dist[i]);
+				if( min > dist[i]) {
+					ret = q;
+					min = dist[i];
+				}
+			}
+		}
+	}
+	return ret;
 }
+
+
 
 int minDistance(int dist[], int sptSet[], int V){
 	int min = INT_MAX, min_index;
@@ -183,14 +223,14 @@ int minDistance(int dist[], int sptSet[], int V){
 	return min_index;
 }
 
-void dijkstra(int **graph, int src, int V){
+int* dijkstra(int **graph, int src, int V){
 	 int *dist = (int *)malloc( sizeof(int) * V);
 	 int *sptSet = (int *)malloc( sizeof(int) * V);
 	 int i,count;
 	 for (i = 0; i < V; i++){
         dist[i] = INT_MAX;
 		sptSet[i] = -1;
-	}
+	 }
  
      dist[src] = 0;
  
@@ -202,6 +242,8 @@ void dijkstra(int **graph, int src, int V){
 				dist[v] = dist[u] + graph[u][v];
 			}
 		}
-     } 
+     }
+	 free(sptSet);
+	 return dist;
 }
 

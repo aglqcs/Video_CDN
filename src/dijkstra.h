@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "log.h"
+#include "nameserver.h"
 
 #define LENTH 50
 
@@ -26,5 +27,6 @@ typedef struct list{
 }list_t;
 
 int graph_init(char *);
-void dijkstra(int **,int, int);
+int* dijkstra(int **,int, int);
+server_list_t* query_dns(char *src, server_list_t *head);
 #endif

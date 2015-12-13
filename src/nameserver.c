@@ -176,6 +176,13 @@ void handle_dns_request(char* buffer, int recvlen, struct sockaddr* remaddr, int
 	else{
 		printf("==========dijkstra===========\n");
 		// TODO: get ip and gen_resp_pkt
+		server_list_t *ret = query_dns(from_str, serv_list);
+		if( ret == NULL) printf("CAN NOT FIND SERVER\n");
+		printf("ADDR: %s\n", ret->sname);
+		if((resp_len=gen_resp_pkt(sbuf, ret->hex)) == 0){
+		         perror("gen_resp_pkt error\n");
+	             return;
+		}
 	}
 	
 	send_len = sendto(sockfd, sbuf, resp_len, 0, remaddr, (socklen_t)sizeof(struct sockaddr_in));
