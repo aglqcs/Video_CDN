@@ -1,0 +1,41 @@
+#########################################################################
+# README					   											#
+#																		#
+# Author: Chun-Ning Chang<chunninc@andrew.cmu.edu>						#
+#         Shuo Chen<shuoc@andrew.cmu.edu>                               #
+#                                                                       #
+# Description: Listing all the files and its purpose				    #
+#                                                                       #
+#                                                                       #
+#########################################################################
+
+FILES:
+Makefile					- 'make run' will run the proxy server
+							- 'make rundns' will run the nameserver implementing OSPF
+							- 'make rundnsrr' will run the nameserver implementing Round Robin
+src/bitrate.[c|h]			- Functions to calculate throughput and bitrate
+src/dijkstra.[c|h]			- Functions and structures to find the ip base on OSPF
+src/handle.[c|h]			- Functions and structures to handle packet from server and client
+src/log.[c|h]				- Functions to generate log files
+src/mydns.[c|h]				- Functions and structures for initiallize DNS socket, create and parse DNS packet.
+src/nameserver.[c|h]		- Nameserver, based on either OSPF or round robin to give client a responsive ip
+src/proxy.[c|h]				- Proxy server, capable to handle packets from both client and server
+
+
+------------------------------------------------------------------------
+Checkpoint1:
+Implmenting a proxy to handle packet from client, parse the packet and reset the bitrate. Send a request to 
+server and receive the response from the server. After parsing the packet, send the response back to the
+client. To update the bitrate, the proxy will start the timer as long as it receive the request packet from
+client, and stop the timer as soon as all the bytes of file are received. The proxy will update the bitrate
+base on the throughput, alpha and the current throughput. The bitrate will be use to update every request
+from client.
+
+------------------------------------------------------------------------
+Chekcpoint2:
+At checkpoint1, we hardcode an ip for the proxy to send and query the request. For this checkpoint, we build a
+name server to tell the proxy which server to query. We implement two method to help the proxy find the right
+server and also distribute the flow to lower the burden for each server. One is round robin, which base on the
+server list we have, we recursivly return the ip through the whole list. Another is dijkstra, base on the geo
+location(LSA), we choose the nearest server and tell the proxy to send request to this server.
+
