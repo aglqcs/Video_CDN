@@ -155,7 +155,7 @@ void update_throughput(double alpha, double buck_size, proxy_session_list_t* nod
 		tmp_tracker->next = NULL;
 		
 	TEST_LOG("%u %lf %lf %lf %d %s %s\n", 
-		(unsigned)ts.tv_sec, duration, throughput, tracker_list->throughput, tracker_list->bitrate, ip, tracker->file);
+		(unsigned)time(NULL), duration, throughput, tracker_list->throughput, tracker_list->bitrate, ip, tracker->file);
 	LOG("free tracker\n");
 	return;
 }
