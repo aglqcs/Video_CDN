@@ -15,6 +15,7 @@
 #include <netdb.h>
 #include "log.h"
 #include "mydns.h"
+#include "dijkstra.h"
 
 typedef struct server_list{
 	char sname[15];	

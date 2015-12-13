@@ -1,7 +1,9 @@
 #include "log.h"
 
+int log_start = 0;
 
 void LOG(const char *format, ...){ 
+  if( log_start == 0) LOG_start();
   FILE *logfile = fopen("/tmp/log", "a");
   va_list ap;
   va_start(ap, format);
@@ -10,8 +12,10 @@ void LOG(const char *format, ...){
 }
 
 void LOG_start(char *path){
+	if( log_start == 1) return;
 	FILE *logfile = fopen("/tmp/log", "w");
 	fclose(logfile);
+	log_start = 1;
 }
 
 void TEST_LOG(const char *format, ...){ 

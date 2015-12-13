@@ -21,6 +21,7 @@ int main(int argc, char* argv[]){
 		port = argv[3];
 		servers = argv[4];
 		lsa = argv[5];
+		graph_init(lsa);
 	}
 	// round robin
 	else if(argc == 7){
