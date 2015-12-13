@@ -195,10 +195,8 @@ server_list_t* query_dns(char *src, server_list_t *head){
 		}
 		server_list_t *q;
 		for( q = head; q!= NULL; q = q->next){
-			LOG("%s matching %s\n", q->sname, p->node.name.name_char);
 			if( strncmp(q->sname, p->node.name.name_char, strlen(p->node.name.name_char)) == 0){
 				// it is a server
-				LOG("server %s dist = %d\n", q->sname, dist[i]);
 				if( min > dist[i]) {
 					ret = q;
 					min = dist[i];

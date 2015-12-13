@@ -25,22 +25,12 @@ int connect_to_server( ){
         return -1;
     }
  
- //	bzero((char *) &server_addr, sizeof(server_addr));
- //   server_addr.sin_family = AF_INET;
- //   server_addr.sin_port = htons(8080);
-  // 	inet_pton(AF_INET, www_ip, &(server_addr.sin_addr));
+ 	bzero((char *) &server_addr, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(8080);
+   	inet_pton(AF_INET, www_ip, &(server_addr.sin_addr));
 	
-	init_mydns(dns_ip, dns_port, fake_ip);
-	struct addrinfo *dnsinfo;
-	resolve("video.cs.cmu.edu", "9999", NULL, &dnsinfo);
-	struct sockaddr_in *serv_addrin = (struct sockaddr_in*)dnsinfo->ai_addr;
-	char ip_str[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &(serv_addrin->sin_addr), ip_str, sizeof(ip_str));
-	printf("Server IP resolved: %s\n", ip_str);
-	printf("about to get conn\n");
-
-   	int ret_connect = connect( client_fd,  (struct sockaddr *) &serv_addrin,  sizeof(serv_addrin));
-   //	int ret_connect = connect( client_fd,  (struct sockaddr *) &server_addr, sizeof(server_addr));
+   	int ret_connect = connect( client_fd,  (struct sockaddr *) &server_addr, sizeof(server_addr));
     if ( ret_connect < 0) {
     	LOG("connect_to_server() Failed to connect %d\n", ret_connect);
         close(client_fd);
@@ -101,12 +91,13 @@ void handle_client_recv(proxy_session_list_t *node){
 	}
    	
 	sscanf(buffer, "%s %s %s", http_method, http_request_file, http_version);
-	LOG("MODIFIED http_request_file:%s\n", http_request_file);
+	printf("MODIFIED http_request_file:%s\n", http_request_file);
 	if(strncmp(http_method, "GET", 3) != 0 || strncmp(http_version, "HTTP/1.1", 8) != 0){
 		LOG("error parsing data\n");
 		return;
 	}
 
+	printf("%s\n", buffer);
 	int ret_write = write(connect, buffer, ret_read);
 	LOG("ret_write = %d\n%s", ret_write, buffer);
 	
@@ -133,18 +124,6 @@ void handle_server_recv(char* ip, double alpha, proxy_session_list_t *node){
     int ret_read = -1;
 	// Start timer
 
-	time_t tmp_start = time(NULL);	
-/*	while( (ret_read = read(fd, buffer,6 *  MAX_LENGTH))  > 0 ){
-//	while( (ret_read = read(fd, buffer, MAX_LENGTH))  > 0 ){
-		LOG("ret_read = %d\n", ret_read);
-		memcpy(big_buffer + total_read, buffer, ret_read);
-		total_read += ret_read;
-		memset(buffer, 0, 6 * MAX_LENGTH);
-	}
-	time_t tmp_end = time(NULL);
-	LOG("time difference read = %d\n", tmp_end - tmp_start );
-	LOG("%d\n\n%s", total_read ,big_buffer);
-*/
 	char ch;
 	int state = 0;
 	while( (ret_read = read( fd, &ch , 1)) > 0){

@@ -1,7 +1,7 @@
 SOURCE  = src
 VPATH   = src
 CC 		= gcc
-CFLAGS  = -Wall  -g -std=gnu99
+CFLAGS  = -Wall -Werror  -g -std=gnu99
 OBJS	= proxy.o log.o handle.o bitrate.o mydns.o
 OBJS_N	= dijkstra.o log.o mydns.o nameserver.o
 

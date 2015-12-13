@@ -7,7 +7,6 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <sys/types.h>
-#include <netdb.h>
 
 int get_response_content_length(char *);
 int parse_f4m_response(char *, int, char *, proxy_session_list_t *);

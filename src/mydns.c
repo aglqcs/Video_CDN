@@ -10,7 +10,6 @@ const char valid_dns[18] = {0x05, 0x76, 0x69, 0x64, 0x65, 0x6f,
 int init_mydns(const char *dns_ip, unsigned int dns_port, const char *local_ip){
 	struct sockaddr_in myaddr;
 	
-	N_LOG("Initialize dns server\n");
 
 	/* Create dns address and port */
 	bzero(&dns_addr, sizeof(dns_addr));
@@ -33,6 +32,7 @@ int init_mydns(const char *dns_ip, unsigned int dns_port, const char *local_ip){
 		perror("peer_run could not bind socket\n");
 		exit(-1);
 	}
+	printf("dns sock = %d\n", dns_sock);
 	return 0;
 }
 

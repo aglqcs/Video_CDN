@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 char *const_log_file_path;
+char *dns_log;
 
 void LOG(const char *format, ...);
 void LOG_start();

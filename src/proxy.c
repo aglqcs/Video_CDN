@@ -12,7 +12,7 @@ proxy_session_list_t *head;
 
 
 int main(int argc, char* argv[]){
-    int server_sockfd, client_sockfd;       
+	int server_sockfd;       
     struct sockaddr_in addr;
 
     signal(SIGPIPE, SIG_IGN);
@@ -23,15 +23,26 @@ int main(int argc, char* argv[]){
     fake_ip = argv[4];
     dns_ip = argv[5];
     dns_port = atoi(argv[6]);
-    www_ip = argv[7];
-
-    head = NULL;
-
+	
+	head = NULL;
     LOG_start();
 	TEST_LOG_start(log_file);
 	
-	// Initate dns listen
-	init_mydns(dns_ip, dns_port, fake_ip);
+	if( argc == 8){
+		www_ip = argv[7];
+	}
+	else{
+		init_mydns(dns_ip, dns_port, fake_ip);
+		struct addrinfo *dnsinfo;
+		resolve("video.cs.cmu.edu", "9999", NULL, &dnsinfo);
+		struct sockaddr_in *serv_addrin = (struct sockaddr_in*)dnsinfo->ai_addr;
+		www_ip = (char *)malloc(50);
+		memset(www_ip, 0 ,50);
+		inet_ntop(AF_INET, &(serv_addrin->sin_addr), www_ip, sizeof(www_ip));
+	}
+
+    	// Initate dns listen
+	/*init_mydns(dns_ip, dns_port, fake_ip);
 	struct addrinfo *dnsinfo;
 	resolve("video.cs.cmu.edu", "9999", NULL, &dnsinfo);
 	struct sockaddr_in *serv_addrin = (struct sockaddr_in*)dnsinfo->ai_addr;
@@ -39,7 +50,7 @@ int main(int argc, char* argv[]){
 	inet_ntop(AF_INET, &(serv_addrin->sin_addr), ip_str, sizeof(ip_str));
 	printf("Server IP resolved: %s\n", ip_str);
 	printf("about to get conn\n");
-
+*/
     LOG("server listening on port = %d\n", listen_port);
     if((server_sockfd = socket(PF_INET, SOCK_STREAM, 0)) < 0){
         return EXIT_FAILURE;

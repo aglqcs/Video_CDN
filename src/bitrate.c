@@ -5,22 +5,17 @@ chunk_tracker_list_t *tracker_head = NULL;
 // Estimate throughput
 double est_tp(double alpha, double curr_tp, struct timespec ts, double buck_size, double *tput, double *duration){
 	// Calculate time
-	struct timespec tval_result, tf;
+	struct timespec tf;
 	clock_gettime(CLOCK_MONOTONIC, &tf);	/* mark the end time */
-	// gettimeofday(&tf, NULL);
-	// timersub(&tf, &ts, &tval_result);
 	uint64_t diff = BILLION * (tf.tv_sec - ts.tv_sec) + tf.tv_nsec - ts.tv_nsec;
 	double tdiff = (double)diff/(double)1000000000;
-	// double tdiff = (double)tval_result.tv_sec + (double)tval_result.tv_usec / 1000000;
 
 	double new_tp = buck_size*8 / tdiff / 1024;
 	*tput = new_tp;
 	*duration = tdiff;
 	printf("tdiff: %lf\n", tdiff);
 	printf("buck_size: %lf\n", buck_size);
-	// LOG("new_tp: %lf\n", new_tp);
 	printf("new_tp: %lf\n", new_tp);
-	// return (new_tp * alpha + curr_tp * (1 - alpha))*10; 
 	return new_tp * alpha + curr_tp * (1 - alpha); 
 }
 
@@ -30,13 +25,9 @@ chunk_tracker_list_t* create_tracker(char* file, proxy_session_list_t* node){
 		LOG("This is not video chunks, ignore it\n");
 		return NULL;
 	}
-	/*
-	if(3 != sscanf(file, "/vod/%dSeg%d-Frag%d", &init_bitrate, &seg, &frag)){
-		LOG("This is not video chunks, ignore it\n");
-		return NULL;
-	} */
-
+	
 	chunk_tracker_list_t* tracker_list = search_seg(node);
+
 	if(tracker_list == NULL){
 		LOG("This is a new chunk, create new list\n");
 		printf("This is a new chunk, create new list\n");
@@ -58,7 +49,6 @@ chunk_tracker_list_t* create_tracker(char* file, proxy_session_list_t* node){
 
 	chunk_tracker_t *new_tracker = (chunk_tracker_t *)malloc( sizeof(chunk_tracker_t));
 	strncpy(new_tracker->file, file, 48);
-	// gettimeofday(&new_tracker->start_time, NULL);
 
 	if(tracker_list->chunks == NULL){
 		tracker_list->chunks = new_tracker;
@@ -79,7 +69,6 @@ chunk_tracker_list_t* search_seg(proxy_session_list_t* pl){
 	}
 	chunk_tracker_list_t *node;
 	for(node=tracker_head; node!=NULL; node=node->next){
-		//if(node->ps->session.client_fd == pl->session.client_fd && node->ps->session.server_fd == pl->session.server_fd){
 		if(node->ps->session.client_fd == pl->session.client_fd){
 			LOG("search_seg is not NULL\n");
 			return node;
@@ -100,9 +89,6 @@ void update_bitrate(char* buffer, chunk_tracker_list_t *tl, proxy_session_list_t
 	printf("throughput: %lf\n", throughput);
 	int i;
 	for(i=3; i>=0; i--){
-		// if(node->session.bitrate[i] == -1)
-		// 	continue;
-		//if((double)node->session.bitrate[i]*1.5 <= throughput){
 		if(rate_get[i]*1.5 <= throughput){
 			rate = rate_get[i];
 			printf("---------------rate: %d--------------\n", (int)rate);
@@ -115,21 +101,22 @@ void update_bitrate(char* buffer, chunk_tracker_list_t *tl, proxy_session_list_t
 	
 	printf("Next rate = %d\n", tl->bitrate);
 
+	memset( first,0,8192);
+	memset( second, 0, 8192);
 	// Retrieve the value of first and second part of string except bitrate
 	char *result = strstr(buffer, "Seg");
 	strcpy(second, result);
 	while(*result != '/'){
 		result--;
 	}
-	int first_offset = ( (int)(result-buffer)+1);
-	strncpy(first, buffer, first_offset);
-	// Convert bit rate from it to string
+	char *p;
+	for( i = 0, p = buffer; p != result + 1;i ++, p++ ){
+		first[i] = *p;
+	}
+	first[i ] = '\0';
 	char bit_rate[20];
 	sprintf(bit_rate, "%d", (int)rate);
 
-	printf("%s\n",bit_rate);
-//	strcpy(buffer, "");
-	memset(buffer, 0 , 8192);
 	strcpy(buffer, first);
 	strcat(buffer, bit_rate);
 	printf("bitrate: %s\n", bit_rate);
@@ -138,6 +125,8 @@ void update_bitrate(char* buffer, chunk_tracker_list_t *tl, proxy_session_list_t
 	char *http = strstr(buffer, "HTTP/1.1");
 	http--;
 	char tmp[48];
+	memset(tmp, 0 ,48);
+	memset(tl->chunks->file, 0 ,64);
 	int pos = http - buffer -4;
 	if(pos > 48)
 		LOG("ERROR: not possible to assign new file name\n");
@@ -165,7 +154,6 @@ void update_throughput(double alpha, double buck_size, proxy_session_list_t* nod
 	if(tmp_tracker != NULL)
 		tmp_tracker->next = NULL;
 		
-	//free(tracker);
 	TEST_LOG("%u %lf %lf %lf %d %s %s\n", 
 		(unsigned)ts.tv_sec, duration, throughput, tracker_list->throughput, tracker_list->bitrate, ip, tracker->file);
 	LOG("free tracker\n");

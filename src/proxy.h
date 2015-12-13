@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <time.h>
+#include <netdb.h>
 #define MAX_LENGTH 8192 
 
 char *log_file;

@@ -2,6 +2,9 @@
 
 int sockfd;
 
+extern int graph_init(char *); 
+extern server_list_t* query_dns(char *src, server_list_t *head);
+
 int main(int argc, char* argv[]){
 	int rr_flag = 0;
 	char *log, *ip, *port, *servers, *lsa;
@@ -40,9 +43,7 @@ int main(int argc, char* argv[]){
 		fprintf(stderr, "Usage: ./nameserver [-r] <log> <ip> <port> <servers> <LSAs>\n");
 		return -1;
 	}
-	
 	N_LOG_start(log);
-	N_LOG("start nameserver.....\n");
 
 	// Build server lists
 	serv_list = get_servers(servers, serv_list);
@@ -158,6 +159,9 @@ void handle_dns_request(char* buffer, int recvlen, struct sockaddr* remaddr, int
 		return;
 	}
 
+	char temp[50];
+	memset(temp, 0 ,50);
+
 	// Round robin
 	if(rr_flag){
 		if(*rr_ptr == NULL){
@@ -168,6 +172,7 @@ void handle_dns_request(char* buffer, int recvlen, struct sockaddr* remaddr, int
 		else{
 			*rr_ptr = (*rr_ptr)->next;
 		}
+		strcpy(temp, (*rr_ptr)->sname);
 		if((resp_len=gen_resp_pkt(sbuf, (*rr_ptr)->hex)) == 0){
 			perror("gen_resp_pkt error\n");
 			return;
@@ -179,12 +184,15 @@ void handle_dns_request(char* buffer, int recvlen, struct sockaddr* remaddr, int
 		server_list_t *ret = query_dns(from_str, serv_list);
 		if( ret == NULL) printf("CAN NOT FIND SERVER\n");
 		printf("ADDR: %s\n", ret->sname);
+		strcpy(temp, ret->sname);
 		if((resp_len=gen_resp_pkt(sbuf, ret->hex)) == 0){
 		         perror("gen_resp_pkt error\n");
 	             return;
 		}
 	}
 	
+	// log the dns record here
+	N_LOG("%lu %s %s %s", time(NULL), from_str, "video.cs.cmu.edu",temp );
 	send_len = sendto(sockfd, sbuf, resp_len, 0, remaddr, (socklen_t)sizeof(struct sockaddr_in));
 	if(send_len < 0)
 		perror("send response packet back error\n");
