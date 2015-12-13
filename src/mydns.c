@@ -56,11 +56,11 @@ int resolve(const char *node, const char *service,
 	buf_len = gen_dns_request(request_buffer, request_packet, node);
 
 	/* send packet to nameserver */
-	// sendto(dns_sock, &request_buffer, sizeof(dns_packet_t), 0, (struct sockaddr *) &dns_addr, sizeof(struct sockaddr));
 	printf("sending packet to dns server\n");
 	int ssize = sendto(dns_sock, &request_buffer, buf_len, 0, (struct sockaddr *) &dns_addr, sizeof(struct sockaddr));
 	if(ssize <= 0){
 		perror("sendto dns server error\n");
+		return -1;
 	}
 	printf("finish sending packet to dns server\n");
 
@@ -69,8 +69,10 @@ int resolve(const char *node, const char *service,
 	ssize = 0;
 	ssize = recvfrom(dns_sock, receive_buffer, BUFSIZE, 0, (struct sockaddr *)&getr_addr, &slen);
 	printf("recv size: %d\n", ssize);
+	parse_response(receive_buffer, ssize, tmp_address);
 
 	/* TODO: retrieve the address and send back to proxy */
+	((struct sockaddr_in*)tmp_address->ai_addr)->sin_port = htons(atoi(service));
 	return 0;
 }
 
@@ -265,5 +267,14 @@ int gen_resp_pkt(char* buffer, char* hex){
 	printf("gen_resp_pkt done------> response packet size: %d\n", pkt_size);
 
 	return pkt_size;
+}
+
+void parse_response(char* buffer, int size, struct addrinfo* tmp_address){
+	uint32_t *ip;
+	char ip_str[4];
+	memcpy(ip_str, buffer+size-4, 4);
+	ip = (uint32_t*)ip_str;
+	((struct sockaddr_in*)tmp_address->ai_addr)->sin_addr.s_addr = *ip;
+	return;
 }
 

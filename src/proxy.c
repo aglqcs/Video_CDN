@@ -34,6 +34,11 @@ int main(int argc, char* argv[]){
 	init_mydns(dns_ip, dns_port, fake_ip);
 	struct addrinfo *dnsinfo;
 	resolve("video.cs.cmu.edu", "9999", NULL, &dnsinfo);
+	struct sockaddr_in *serv_addrin = (struct sockaddr_in*)dnsinfo->ai_addr;
+	char ip_str[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &(serv_addrin->sin_addr), ip_str, sizeof(ip_str));
+	printf("Server IP resolved: %s\n", ip_str);
+	printf("about to get conn\n");
 
     LOG("server listening on port = %d\n", listen_port);
     if((server_sockfd = socket(PF_INET, SOCK_STREAM, 0)) < 0){

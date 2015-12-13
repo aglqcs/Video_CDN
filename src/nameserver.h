@@ -25,7 +25,7 @@ typedef struct server_list{
 
 server_list_t* get_servers(char* servers, server_list_t *list);
 void translate_ip_to_hex(server_list_t* tmp);
-void handle_dns_request(char* buffer, int recvlen, struct sockaddr *remaddr, int rr_flag, server_list_t *serv_list, server_list_t **rr_ptr);
+void handle_dns_request(char* buffer, int recvlen, struct sockaddr *remaddr, int rr_flag, server_list_t *serv_list, server_list_t **rr_ptr, char* from_str);
 void send_error(struct sockaddr *remaddr);
 
 #endif
