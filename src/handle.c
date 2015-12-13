@@ -3,7 +3,7 @@
 extern chunk_tracker_list_t* tracker_head;
 
 
-int connect_to_server(){
+int connect_to_server( ){
 	struct sockaddr_in server_addr, client_addr;
 	int client_fd;
 
@@ -24,12 +24,23 @@ int connect_to_server(){
         close( client_fd);
         return -1;
     }
-    bzero((char *) &server_addr, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(8080);
-   	inet_pton(AF_INET, www_ip, &(server_addr.sin_addr));
+ 
+ //	bzero((char *) &server_addr, sizeof(server_addr));
+ //   server_addr.sin_family = AF_INET;
+ //   server_addr.sin_port = htons(8080);
+  // 	inet_pton(AF_INET, www_ip, &(server_addr.sin_addr));
+	
+	init_mydns(dns_ip, dns_port, fake_ip);
+	struct addrinfo *dnsinfo;
+	resolve("video.cs.cmu.edu", "9999", NULL, &dnsinfo);
+	struct sockaddr_in *serv_addrin = (struct sockaddr_in*)dnsinfo->ai_addr;
+	char ip_str[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &(serv_addrin->sin_addr), ip_str, sizeof(ip_str));
+	printf("Server IP resolved: %s\n", ip_str);
+	printf("about to get conn\n");
 
-   	int ret_connect = connect( client_fd,  (struct sockaddr *) &server_addr, sizeof(server_addr));
+   	int ret_connect = connect( client_fd,  (struct sockaddr *) &serv_addrin,  sizeof(serv_addrin));
+   //	int ret_connect = connect( client_fd,  (struct sockaddr *) &server_addr, sizeof(server_addr));
     if ( ret_connect < 0) {
     	LOG("connect_to_server() Failed to connect %d\n", ret_connect);
         close(client_fd);

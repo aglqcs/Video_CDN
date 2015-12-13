@@ -206,6 +206,7 @@ server_list_t* query_dns(char *src, server_list_t *head){
 			}
 		}
 	}
+	printf("DNS RETURN %s\n", ret->sname);
 	return ret;
 }
 

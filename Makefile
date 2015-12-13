@@ -26,5 +26,5 @@ rundnsrr:
 	./nameserver -r /tmp/nlog 5.0.0.1 5555 topos/topo1/topo1.servers topos/topo1/topo1.lsa
 
 rundns:
-	./nameserver /tmp/nlog 5.0.0.1 5555 topos/topo2/topo2.servers topos/topo2/topo2.lsa
+	./nameserver /tmp/nlog 5.0.0.1 5555 topos/topo1/topo1.servers topos/topo1/topo1.lsa
 
